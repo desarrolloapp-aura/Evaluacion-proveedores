@@ -121,7 +121,7 @@ let itemsProducto = [];
 let itemsServicio = [];
 
 // Cargar configuración desde Supabase
-async function cargarConfiguracionEvaluacion() {
+async function cargarConfiguracionEvaluacionLocal() {
     try {
         const config = await cargarConfiguracionEvaluacion();
         if (config) {
@@ -134,12 +134,6 @@ async function cargarConfiguracionEvaluacion() {
     return getConfiguracionDefault();
 }
 
-// Ítems de evaluación para PRODUCTO (desde configuración)
-const itemsProducto = configEvaluacion.itemsProducto || [];
-
-// Ítems de evaluación para SERVICIO (desde configuración)
-const itemsServicio = configEvaluacion.itemsServicio || [];
-
 // Escala de respuesta
 const escalaRespuesta = [25, 50, 75, 100];
 
@@ -150,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('Cargando datos desde Supabase...');
         
         // Cargar configuración
-        configEvaluacion = await cargarConfiguracionEvaluacion();
+        configEvaluacion = await cargarConfiguracionEvaluacionLocal();
         itemsProducto = configEvaluacion.itemsProducto || [];
         itemsServicio = configEvaluacion.itemsServicio || [];
         
@@ -246,14 +240,14 @@ function inicializarEvaluadores() {
 
 function inicializarEventos() {
     // Cambio de evaluador
-    document.getElementById('evaluador').addEventListener('change', function() {
-        actualizarProveedores();
+    document.getElementById('evaluador').addEventListener('change', async function() {
+        await actualizarProveedores();
     });
 
     // Cambio de tipo de proveedor
     document.querySelectorAll('input[name="tipoProveedor"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            actualizarProveedores();
+        radio.addEventListener('change', async function() {
+            await actualizarProveedores();
         });
     });
 
@@ -313,7 +307,7 @@ function inicializarEventos() {
     });
 }
 
-function actualizarProveedores() {
+async function actualizarProveedores() {
     const evaluador = document.getElementById('evaluador').value;
     const tipoProveedor = document.querySelector('input[name="tipoProveedor"]:checked');
     const selectProveedor = document.getElementById('proveedor');
@@ -526,7 +520,7 @@ async function guardarEvaluacion() {
         
         alert('✅ Evaluación guardada exitosamente en la base de datos. Ahora está disponible desde cualquier lugar.');
         limpiarFormulario();
-        actualizarProveedores();
+        await actualizarProveedores();
     } catch (error) {
         console.error('Error al guardar evaluación:', error);
         alert('❌ Error al guardar la evaluación. Por favor, intente nuevamente.');

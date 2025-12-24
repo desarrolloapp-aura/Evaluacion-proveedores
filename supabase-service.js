@@ -4,13 +4,20 @@
 // Esperar a que Supabase esté listo
 function waitForSupabase() {
     return new Promise((resolve) => {
-        if (window.supabase && supabase) {
+        if (window.supabaseClient) {
             resolve();
         } else {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 segundos máximo
             const checkInterval = setInterval(() => {
-                if (window.supabase && supabase) {
+                attempts++;
+                if (window.supabaseClient) {
                     clearInterval(checkInterval);
                     resolve();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    console.error('Timeout esperando Supabase');
+                    resolve(); // Resolver de todas formas para no bloquear
                 }
             }, 100);
         }
@@ -22,7 +29,7 @@ function waitForSupabase() {
 async function cargarConfiguracionEvaluacion() {
     await waitForSupabase();
     try {
-        const { data, error } = await supabase
+        const { data, error } = await window.supabaseClient
             .from('config_evaluacion')
             .select('*')
             .order('id', { ascending: false })
@@ -55,7 +62,7 @@ async function guardarConfiguracionEvaluacion(config) {
     await waitForSupabase();
     try {
         // Verificar si ya existe una configuración
-        const { data: existing } = await supabase
+        const { data: existing } = await window.supabaseClient
             .from('config_evaluacion')
             .select('id')
             .limit(1)
@@ -71,7 +78,7 @@ async function guardarConfiguracionEvaluacion(config) {
         
         if (existing) {
             // Actualizar
-            const { error } = await supabase
+            const { error } = await window.supabaseClient
                 .from('config_evaluacion')
                 .update(configData)
                 .eq('id', existing.id);
@@ -79,7 +86,7 @@ async function guardarConfiguracionEvaluacion(config) {
             if (error) throw error;
         } else {
             // Insertar
-            const { error } = await supabase
+            const { error } = await window.supabaseClient
                 .from('config_evaluacion')
                 .insert([configData]);
             
@@ -123,7 +130,7 @@ function getConfiguracionDefault() {
 async function cargarEvaluadores() {
     await waitForSupabase();
     try {
-        const { data, error } = await supabase
+        const { data, error } = await window.supabaseClient
             .from('evaluadores')
             .select('*')
             .eq('activo', true)
@@ -140,7 +147,32 @@ async function cargarEvaluadores() {
 async function crearEvaluador(nombre) {
     await waitForSupabase();
     try {
-        const { data, error } = await supabase
+        // Verificar si ya existe (activo o inactivo)
+        const { data: existente } = await window.supabaseClient
+            .from('evaluadores')
+            .select('id, activo')
+            .eq('nombre', nombre)
+            .maybeSingle();
+        
+        if (existente) {
+            // Si existe pero está inactivo, reactivarlo
+            if (!existente.activo) {
+                const { data, error } = await window.supabaseClient
+                    .from('evaluadores')
+                    .update({ activo: true })
+                    .eq('id', existente.id)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                return data;
+            }
+            // Si ya existe y está activo, retornar el existente
+            return existente;
+        }
+        
+        // Si no existe, crearlo
+        const { data, error } = await window.supabaseClient
             .from('evaluadores')
             .insert([{ nombre: nombre }])
             .select()
@@ -157,7 +189,7 @@ async function crearEvaluador(nombre) {
 async function eliminarEvaluador(nombre) {
     await waitForSupabase();
     try {
-        const { error } = await supabase
+        const { error } = await window.supabaseClient
             .from('evaluadores')
             .update({ activo: false })
             .eq('nombre', nombre);
@@ -175,7 +207,7 @@ async function eliminarEvaluador(nombre) {
 async function cargarProveedores() {
     await waitForSupabase();
     try {
-        const { data, error } = await supabase
+        const { data, error } = await window.supabaseClient
             .from('proveedores')
             .select('*')
             .eq('activo', true)
@@ -198,7 +230,32 @@ async function cargarProveedores() {
 async function crearProveedor(nombre, tipo) {
     await waitForSupabase();
     try {
-        const { data, error } = await supabase
+        // Verificar si ya existe (activo o inactivo)
+        const { data: existente } = await window.supabaseClient
+            .from('proveedores')
+            .select('id, activo, tipo')
+            .eq('nombre', nombre)
+            .maybeSingle();
+        
+        if (existente) {
+            // Si existe pero está inactivo, reactivarlo y actualizar tipo si es necesario
+            if (!existente.activo || existente.tipo !== tipo) {
+                const { data, error } = await window.supabaseClient
+                    .from('proveedores')
+                    .update({ activo: true, tipo: tipo })
+                    .eq('id', existente.id)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                return data;
+            }
+            // Si ya existe y está activo, retornar el existente
+            return existente;
+        }
+        
+        // Si no existe, crearlo
+        const { data, error } = await window.supabaseClient
             .from('proveedores')
             .insert([{ nombre: nombre, tipo: tipo }])
             .select()
@@ -215,7 +272,7 @@ async function crearProveedor(nombre, tipo) {
 async function eliminarProveedor(nombre) {
     await waitForSupabase();
     try {
-        const { error } = await supabase
+        const { error } = await window.supabaseClient
             .from('proveedores')
             .update({ activo: false })
             .eq('nombre', nombre);
@@ -233,7 +290,7 @@ async function eliminarProveedor(nombre) {
 async function cargarAsignaciones() {
     await waitForSupabase();
     try {
-        const { data: evaluadores } = await supabase
+        const { data: evaluadores } = await window.supabaseClient
             .from('evaluadores')
             .select('id, nombre')
             .eq('activo', true);
@@ -243,7 +300,7 @@ async function cargarAsignaciones() {
         const asignaciones = {};
         
         for (const evaluador of evaluadores) {
-            const { data: asigns } = await supabase
+            const { data: asigns } = await window.supabaseClient
                 .from('asignaciones')
                 .select(`
                     tipo,
@@ -278,12 +335,12 @@ async function guardarAsignaciones(asignaciones) {
     await waitForSupabase();
     try {
         // Obtener IDs de evaluadores y proveedores
-        const { data: evaluadores } = await supabase
+        const { data: evaluadores } = await window.supabaseClient
             .from('evaluadores')
             .select('id, nombre')
             .eq('activo', true);
         
-        const { data: proveedores } = await supabase
+        const { data: proveedores } = await window.supabaseClient
             .from('proveedores')
             .select('id, nombre')
             .eq('activo', true);
@@ -295,7 +352,7 @@ async function guardarAsignaciones(asignaciones) {
         proveedores.forEach(p => proveedoresMap[p.nombre] = p.id);
         
         // Eliminar todas las asignaciones existentes
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await window.supabaseClient
             .from('asignaciones')
             .delete()
             .neq('id', 0); // Eliminar todas
@@ -324,7 +381,7 @@ async function guardarAsignaciones(asignaciones) {
         });
         
         if (asignacionesToInsert.length > 0) {
-            const { error: insertError } = await supabase
+            const { error: insertError } = await window.supabaseClient
                 .from('asignaciones')
                 .insert(asignacionesToInsert);
             
@@ -343,7 +400,7 @@ async function guardarAsignaciones(asignaciones) {
 async function cargarEvaluaciones() {
     await waitForSupabase();
     try {
-        const { data, error } = await supabase
+        const { data, error } = await window.supabaseClient
             .from('evaluaciones')
             .select(`
                 *,
@@ -375,14 +432,14 @@ async function guardarEvaluacionEnSupabase(evaluacion) {
     await waitForSupabase();
     try {
         // Obtener IDs
-        const { data: evaluador } = await supabase
+        const { data: evaluador } = await window.supabaseClient
             .from('evaluadores')
             .select('id')
             .eq('nombre', evaluacion.evaluador)
             .eq('activo', true)
             .single();
         
-        const { data: proveedor } = await supabase
+        const { data: proveedor } = await window.supabaseClient
             .from('proveedores')
             .select('id')
             .eq('nombre', evaluacion.proveedor)
@@ -408,7 +465,7 @@ async function guardarEvaluacionEnSupabase(evaluacion) {
             });
         }
         
-        const { data, error } = await supabase
+        const { data, error } = await window.supabaseClient
             .from('evaluaciones')
             .insert([{
                 evaluador_id: evaluador.id,
@@ -433,7 +490,7 @@ async function guardarEvaluacionEnSupabase(evaluacion) {
 async function eliminarEvaluacion(id) {
     await waitForSupabase();
     try {
-        const { error } = await supabase
+        const { error } = await window.supabaseClient
             .from('evaluaciones')
             .delete()
             .eq('id', id);
