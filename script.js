@@ -90,26 +90,22 @@ const asignacionProveedoresDefault = {
     }
 };
 
-// Cargar asignación de proveedores desde localStorage o usar valores por defecto
-function cargarAsignacionProveedores() {
-    const configGuardada = localStorage.getItem('configEvaluacion');
-    if (configGuardada) {
-        try {
-            const config = JSON.parse(configGuardada);
-            if (config.asignacionProveedores) {
-                return config.asignacionProveedores;
-            }
-        } catch (e) {
-            console.error('Error al cargar asignación de proveedores:', e);
+// Variables globales que se cargarán desde Supabase
+let asignacionProveedores = asignacionProveedoresDefault;
+let evaluadores = [];
+
+// Cargar asignación de proveedores desde Supabase
+async function cargarAsignacionProveedores() {
+    try {
+        const asignaciones = await cargarAsignaciones();
+        if (asignaciones && Object.keys(asignaciones).length > 0) {
+            return asignaciones;
         }
+    } catch (e) {
+        console.error('Error al cargar asignación de proveedores desde Supabase:', e);
     }
     return asignacionProveedoresDefault;
 }
-
-const asignacionProveedores = cargarAsignacionProveedores();
-
-// Lista de evaluadores
-const evaluadores = Object.keys(asignacionProveedores);
 
 // Función auxiliar para obtener proveedores de un evaluador por tipo
 function obtenerProveedoresPorEvaluador(evaluador, tipo) {
@@ -119,42 +115,24 @@ function obtenerProveedoresPorEvaluador(evaluador, tipo) {
     return asignacionProveedores[evaluador][tipo] || [];
 }
 
-// Cargar configuración desde localStorage o usar valores por defecto
-function cargarConfiguracionEvaluacion() {
-    const guardada = localStorage.getItem('configEvaluacion');
-    if (guardada) {
-        try {
-            return JSON.parse(guardada);
-        } catch (e) {
-            console.error('Error al cargar configuración:', e);
+// Variables globales
+let configEvaluacion = null;
+let itemsProducto = [];
+let itemsServicio = [];
+
+// Cargar configuración desde Supabase
+async function cargarConfiguracionEvaluacion() {
+    try {
+        const config = await cargarConfiguracionEvaluacion();
+        if (config) {
+            return config;
         }
+    } catch (e) {
+        console.error('Error al cargar configuración desde Supabase:', e);
     }
     // Valores por defecto
-    return {
-        titulo: 'Evaluación de Proveedores',
-        descripcion: 'Este sistema permite evaluar el desempeño de nuestros proveedores mediante un proceso estructurado y objetivo, considerando diferentes aspectos según el tipo de proveedor (Producto o Servicio).',
-        objetivo: 'Medir y mejorar continuamente la calidad de nuestros proveedores, asegurando que cumplan con los estándares requeridos en términos de calidad de productos/servicios, cumplimiento de plazos, comunicación y respuesta, y certificaciones y cumplimiento normativo.',
-        itemsProducto: [
-            { nombre: 'Condiciones Financieras de Pago', ponderacion: 10 },
-            { nombre: 'Información de certificación o implementación respecto a alguna ISO', ponderacion: 4 },
-            { nombre: 'Comunicación fluida con el cliente', ponderacion: 4 },
-            { nombre: 'Reacción frente a nuevos requerimientos', ponderacion: 5 },
-            { nombre: 'Información técnica de los productos (Calidad, Medio Ambiente y Seguridad)', ponderacion: 2 },
-            { nombre: 'Cumplimiento de plazos de entrega, horarios de bodega y documentación', ponderacion: 65 },
-            { nombre: 'Certificación del producto del proveedor', ponderacion: 10 }
-        ],
-        itemsServicio: [
-            { nombre: 'Comportamiento seguro durante la prestación del servicio', ponderacion: 10 },
-            { nombre: 'Cumplimiento de la oportunidad en la realización del servicio', ponderacion: 33 },
-            { nombre: 'Calidad del servicio', ponderacion: 33 },
-            { nombre: 'Comunicación fluida con el prestador del servicio', ponderacion: 7 },
-            { nombre: 'Reacción del prestador frente a nuevos requerimientos', ponderacion: 10 },
-            { nombre: 'Publicación del estado en regla de las partes relevantes y otra información relevante para el usuario AURA', ponderacion: 7 }
-        ]
-    };
+    return getConfiguracionDefault();
 }
-
-const configEvaluacion = cargarConfiguracionEvaluacion();
 
 // Ítems de evaluación para PRODUCTO (desde configuración)
 const itemsProducto = configEvaluacion.itemsProducto || [];
@@ -166,7 +144,36 @@ const itemsServicio = configEvaluacion.itemsServicio || [];
 const escalaRespuesta = [25, 50, 75, 100];
 
 // Inicialización
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Cargar datos desde Supabase
+    try {
+        console.log('Cargando datos desde Supabase...');
+        
+        // Cargar configuración
+        configEvaluacion = await cargarConfiguracionEvaluacion();
+        itemsProducto = configEvaluacion.itemsProducto || [];
+        itemsServicio = configEvaluacion.itemsServicio || [];
+        
+        // Cargar asignaciones y evaluadores
+        asignacionProveedores = await cargarAsignacionProveedores();
+        evaluadores = await cargarEvaluadores();
+        
+        // Si no hay evaluadores en Supabase, usar los de las asignaciones
+        if (evaluadores.length === 0) {
+            evaluadores = Object.keys(asignacionProveedores);
+        }
+        
+        console.log('✅ Datos cargados desde Supabase');
+    } catch (error) {
+        console.error('Error al cargar datos desde Supabase, usando valores por defecto:', error);
+        // Usar valores por defecto
+        configEvaluacion = getConfiguracionDefault();
+        itemsProducto = configEvaluacion.itemsProducto || [];
+        itemsServicio = configEvaluacion.itemsServicio || [];
+        evaluadores = Object.keys(asignacionProveedores);
+    }
+    
+    // Continuar con la inicialización normal
     actualizarInformacionDesdeConfig();
     inicializarEvaluadores();
     inicializarEventos();
@@ -326,12 +333,12 @@ function actualizarProveedores() {
     
     if (tipoProveedor) {
         // Obtener evaluaciones guardadas
-        const evaluaciones = JSON.parse(localStorage.getItem('evaluaciones') || '[]');
+        const evaluaciones = await cargarEvaluaciones();
         
         // Obtener proveedores ya evaluados por este evaluador y tipo
         const proveedoresEvaluados = new Set();
         evaluaciones.forEach(eval => {
-            if (eval.evaluador === evaluador && eval.tipoProveedor === tipoProveedor.value) {
+            if (eval.evaluador === evaluador && eval.tipo === tipoProveedor.value) {
                 proveedoresEvaluados.add(eval.proveedor);
             }
         });
@@ -465,7 +472,7 @@ function calcularResultado() {
     }
 }
 
-function guardarEvaluacion() {
+async function guardarEvaluacion() {
     const evaluador = document.getElementById('evaluador').value;
     const tipoProveedor = document.querySelector('input[name="tipoProveedor"]:checked');
     const proveedor = document.getElementById('proveedor').value;
@@ -487,24 +494,43 @@ function guardarEvaluacion() {
         }
     });
     
-    const evaluacion = {
-        id: Date.now(),
-        evaluador: evaluador,
-        proveedor: proveedor,
-        correoProveedor: correoProveedor,
-        tipoProveedor: tipoProveedor.value,
-        respuestas: respuestas,
-        resultadoFinal: parseFloat(resultadoFinal.replace('%', '')),
-        fecha: new Date().toLocaleString('es-ES')
-    };
+    // Guardar en Supabase (usando la función de supabase-service.js)
+    // Convertir respuestas a formato array para Supabase
+    const respuestasArray = [];
+    Object.keys(respuestas).forEach(itemNombre => {
+        respuestasArray.push({
+            item: itemNombre,
+            valor: respuestas[itemNombre]
+        });
+    });
     
-    // Guardar en localStorage
-    let evaluaciones = JSON.parse(localStorage.getItem('evaluaciones') || '[]');
-    evaluaciones.push(evaluacion);
-    localStorage.setItem('evaluaciones', JSON.stringify(evaluaciones));
-    
-    alert('Evaluación guardada exitosamente.');
-    limpiarFormulario();
+    try {
+        // Llamar a la función de supabase-service.js
+        const evaluacionData = {
+            evaluador: evaluador,
+            proveedor: proveedor,
+            tipo: tipoProveedor.value,
+            correoProveedor: correoProveedor,
+            respuestas: respuestasArray,
+            resultadoFinal: parseFloat(resultadoFinal.replace('%', '')),
+            fecha: new Date().toISOString()
+        };
+        
+        // Usar window para asegurar que llamamos a la función global de supabase-service.js
+        if (typeof window.guardarEvaluacionEnSupabase === 'function') {
+            await window.guardarEvaluacionEnSupabase(evaluacionData);
+        } else {
+            // Fallback: llamar directamente (debería estar en scope global)
+            await guardarEvaluacion(evaluacionData);
+        }
+        
+        alert('✅ Evaluación guardada exitosamente en la base de datos. Ahora está disponible desde cualquier lugar.');
+        limpiarFormulario();
+        actualizarProveedores();
+    } catch (error) {
+        console.error('Error al guardar evaluación:', error);
+        alert('❌ Error al guardar la evaluación. Por favor, intente nuevamente.');
+    }
 }
 
 function limpiarFormulario() {
@@ -517,23 +543,27 @@ function limpiarFormulario() {
     document.getElementById('correoProveedor').value = '';
 }
 
-function eliminarEvaluacion(id) {
+async function eliminarEvaluacionPorId(id) {
     if (!confirm('¿Está seguro de que desea eliminar esta evaluación?')) {
         return;
     }
     
-    let evaluaciones = JSON.parse(localStorage.getItem('evaluaciones') || '[]');
-    evaluaciones = evaluaciones.filter(e => e.id !== id);
-    localStorage.setItem('evaluaciones', JSON.stringify(evaluaciones));
-    
-    // Refrescar la lista
-    mostrarEvaluaciones();
-    
-    alert('Evaluación eliminada exitosamente.');
+    try {
+        const success = await eliminarEvaluacion(id);
+        if (success) {
+            alert('✅ Evaluación eliminada exitosamente.');
+            mostrarEvaluaciones();
+        } else {
+            alert('❌ Error al eliminar la evaluación.');
+        }
+    } catch (error) {
+        console.error('Error al eliminar evaluación:', error);
+        alert('❌ Error al eliminar la evaluación.');
+    }
 }
 
-function mostrarEvaluaciones() {
-    const evaluaciones = JSON.parse(localStorage.getItem('evaluaciones') || '[]');
+async function mostrarEvaluaciones() {
+    const evaluaciones = await cargarEvaluaciones();
     const container = document.getElementById('evaluacionesList');
     const botonesContainer = document.getElementById('botonesProveedores');
     
@@ -574,14 +604,15 @@ function mostrarEvaluaciones() {
             
             const infoDiv = document.createElement('div');
             infoDiv.style.flex = '1';
+            const fechaFormateada = new Date(eval.fecha).toLocaleString('es-ES');
             infoDiv.innerHTML = `
-                <strong>${eval.proveedor}</strong> - ${eval.tipoProveedor} | ${eval.fecha} | Resultado: ${eval.resultadoFinal.toFixed(2)}%
+                <strong>${eval.proveedor}</strong> - ${eval.tipo} | ${fechaFormateada} | Resultado: ${eval.resultadoFinal.toFixed(2)}%
             `;
             
             const btnEliminar = document.createElement('button');
             btnEliminar.className = 'btn-eliminar';
             btnEliminar.textContent = 'Eliminar';
-            btnEliminar.onclick = () => eliminarEvaluacion(eval.id);
+            btnEliminar.onclick = () => eliminarEvaluacionPorId(eval.id);
             
             div.appendChild(infoDiv);
             div.appendChild(btnEliminar);
@@ -592,8 +623,8 @@ function mostrarEvaluaciones() {
     document.getElementById('modalEvaluaciones').style.display = 'block';
 }
 
-function descargarExcel() {
-    const evaluaciones = JSON.parse(localStorage.getItem('evaluaciones') || '[]');
+async function descargarExcel() {
+    const evaluaciones = await cargarEvaluaciones();
     
     if (evaluaciones.length === 0) {
         alert('No hay evaluaciones guardadas para descargar.');
@@ -611,8 +642,8 @@ function descargarExcel() {
     crearYDescargarExcel(evaluaciones, 'Todas las Evaluaciones');
 }
 
-function descargarExcelPorProveedor(nombreProveedor) {
-    const evaluaciones = JSON.parse(localStorage.getItem('evaluaciones') || '[]');
+async function descargarExcelPorProveedor(nombreProveedor) {
+    const evaluaciones = await cargarEvaluaciones();
     const evaluacionesProveedor = evaluaciones.filter(e => e.proveedor === nombreProveedor);
     
     if (evaluacionesProveedor.length === 0) {
@@ -631,13 +662,13 @@ function crearYDescargarExcel(evaluaciones, titulo) {
     const datosExcel = [];
     
     evaluaciones.forEach(eval => {
-        const items = eval.tipoProveedor === 'PRODUCTO' ? itemsProducto : itemsServicio;
+        const items = eval.tipo === 'PRODUCTO' ? itemsProducto : itemsServicio;
         const fila = {
             'Fecha': eval.fecha,
             'Evaluador': eval.evaluador,
             'Proveedor': eval.proveedor,
             'Correo Proveedor': eval.correoProveedor || 'No especificado',
-            'Tipo': eval.tipoProveedor,
+            'Tipo': eval.tipo,
             'Resultado Final (%)': eval.resultadoFinal.toFixed(2)
         };
         
@@ -678,14 +709,14 @@ function crearYDescargarExcel(evaluaciones, titulo) {
 }
 
 function generarContenidoCorreo(evaluacion) {
-    const items = evaluacion.tipoProveedor === 'PRODUCTO' ? itemsProducto : itemsServicio;
+    const items = evaluacion.tipo === 'PRODUCTO' ? itemsProducto : itemsServicio;
     
     let contenido = `Estimado/a Proveedor ${evaluacion.proveedor},\n\n`;
     contenido += `Le informamos los resultados de su evaluación realizada el ${evaluacion.fecha}.\n\n`;
     contenido += `INFORMACIÓN GENERAL:\n`;
     contenido += `${'='.repeat(60)}\n`;
     contenido += `Evaluador: ${evaluacion.evaluador}\n`;
-    contenido += `Tipo de Proveedor: ${evaluacion.tipoProveedor}\n`;
+    contenido += `Tipo de Proveedor: ${evaluacion.tipo}\n`;
     contenido += `Fecha de Evaluación: ${evaluacion.fecha}\n`;
     contenido += `${'='.repeat(60)}\n\n`;
     
@@ -713,8 +744,8 @@ function generarContenidoCorreo(evaluacion) {
     return contenido;
 }
 
-function enviarCorreoIndividual(idEvaluacion) {
-    const evaluaciones = JSON.parse(localStorage.getItem('evaluaciones') || '[]');
+async function enviarCorreoIndividual(idEvaluacion) {
+    const evaluaciones = await cargarEvaluaciones();
     const evaluacion = evaluaciones.find(e => e.id === idEvaluacion);
     
     if (!evaluacion) {
@@ -733,20 +764,32 @@ function enviarCorreoIndividual(idEvaluacion) {
     
     // Crear Excel temporalmente
     const datosExcel = [];
-    const items = evaluacion.tipoProveedor === 'PRODUCTO' ? itemsProducto : itemsServicio;
+    const items = evaluacion.tipo === 'PRODUCTO' ? itemsProducto : itemsServicio;
+    const fechaFormateada = new Date(evaluacion.fecha).toLocaleString('es-ES');
     const fila = {
-        'Fecha': evaluacion.fecha,
+        'Fecha': fechaFormateada,
         'Evaluador': evaluacion.evaluador,
         'Proveedor': evaluacion.proveedor,
         'Correo Proveedor': evaluacion.correoProveedor || 'No especificado',
-        'Tipo': evaluacion.tipoProveedor,
+        'Tipo': evaluacion.tipo,
         'Resultado Final (%)': evaluacion.resultadoFinal.toFixed(2)
     };
     
-    items.forEach(item => {
-        const respuesta = evaluacion.respuestas[item.nombre] || 0;
-        fila[`${item.nombre} (${item.ponderacion}%)`] = respuesta + '%';
-    });
+    // Las respuestas vienen como array desde Supabase
+    if (Array.isArray(evaluacion.respuestas)) {
+        evaluacion.respuestas.forEach(resp => {
+            const item = items.find(i => i.nombre === resp.item);
+            if (item) {
+                fila[`${item.nombre} (${item.ponderacion}%)`] = resp.valor + '%';
+            }
+        });
+    } else {
+        // Formato antiguo (objeto)
+        items.forEach(item => {
+            const respuesta = evaluacion.respuestas[item.nombre] || 0;
+            fila[`${item.nombre} (${item.ponderacion}%)`] = respuesta + '%';
+        });
+    }
     datosExcel.push(fila);
     
     const wb = XLSX.utils.book_new();
@@ -778,8 +821,8 @@ function enviarCorreoIndividual(idEvaluacion) {
     }, 500);
 }
 
-function enviarCorreosProveedores() {
-    const evaluaciones = JSON.parse(localStorage.getItem('evaluaciones') || '[]');
+async function enviarCorreosProveedores() {
+    const evaluaciones = await cargarEvaluaciones();
     
     if (evaluaciones.length === 0) {
         alert('No hay evaluaciones guardadas.');
@@ -831,13 +874,13 @@ function enviarCorreosProveedores() {
             
             const datosExcel = [];
             evaluacionesProveedor.forEach(eval => {
-                const items = eval.tipoProveedor === 'PRODUCTO' ? itemsProducto : itemsServicio;
+                const items = eval.tipo === 'PRODUCTO' ? itemsProducto : itemsServicio;
                 const fila = {
                     'Fecha': eval.fecha,
                     'Evaluador': eval.evaluador,
                     'Proveedor': eval.proveedor,
                     'Correo Proveedor': eval.correoProveedor || 'No especificado',
-                    'Tipo': eval.tipoProveedor,
+                    'Tipo': eval.tipo,
                     'Resultado Final (%)': eval.resultadoFinal.toFixed(2)
                 };
                 

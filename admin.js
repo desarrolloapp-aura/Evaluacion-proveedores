@@ -54,27 +54,49 @@ const configuracionDefault = {
 // Cargar configuración guardada o usar valores por defecto
 let configuracion = cargarConfiguracion();
 
-function cargarConfiguracion() {
-    const guardada = localStorage.getItem('configEvaluacion');
-    if (guardada) {
-        try {
-            return JSON.parse(guardada);
-        } catch (e) {
-            console.error('Error al cargar configuración:', e);
-            return configuracionDefault;
+async function cargarConfiguracion() {
+    try {
+        const config = await cargarConfiguracionEvaluacion();
+        if (config) {
+            return {
+                ...configuracionDefault,
+                ...config,
+                asignacionProveedores: await cargarAsignaciones(),
+                proveedores: await cargarProveedores()
+            };
         }
+    } catch (e) {
+        console.error('Error al cargar configuración desde Supabase:', e);
     }
     return configuracionDefault;
 }
 
-function guardarConfiguracion() {
-    localStorage.setItem('configEvaluacion', JSON.stringify(configuracion));
-    mostrarMensaje('✅ Configuración guardada exitosamente. Redirigiendo al formulario...');
-    
-    // Redirigir al formulario después de 1 segundo
-    setTimeout(function() {
-        window.location.href = 'index.html';
-    }, 1000);
+async function guardarConfiguracion() {
+    try {
+        // Guardar configuración de evaluación
+        await guardarConfiguracionEvaluacion({
+            titulo: configuracion.titulo,
+            descripcion: configuracion.descripcion,
+            objetivo: configuracion.objetivo,
+            itemsProducto: configuracion.itemsProducto,
+            itemsServicio: configuracion.itemsServicio
+        });
+        
+        // Guardar asignaciones
+        if (configuracion.asignacionProveedores) {
+            await guardarAsignaciones(configuracion.asignacionProveedores);
+        }
+        
+        mostrarMensaje('✅ Configuración guardada exitosamente en la base de datos. Redirigiendo al formulario...');
+        
+        // Redirigir al formulario después de 1 segundo
+        setTimeout(function() {
+            window.location.href = 'index.html';
+        }, 1000);
+    } catch (error) {
+        console.error('Error al guardar configuración:', error);
+        mostrarMensaje('❌ Error al guardar la configuración. Por favor, intente nuevamente.');
+    }
 }
 
 function mostrarMensaje(mensaje) {
@@ -93,10 +115,10 @@ if (document.readyState === 'loading') {
     inicializar();
 }
 
-function inicializar() {
+async function inicializar() {
     try {
         console.log('Iniciando panel de administración...');
-        inicializarFormulario();
+        await inicializarFormulario();
         inicializarEventos();
         console.log('Panel de administración inicializado correctamente');
     } catch (error) {
@@ -250,7 +272,7 @@ function inicializarEvaluadores() {
         btnEliminar.textContent = '🗑️';
         btnEliminar.title = 'Eliminar evaluador';
         btnEliminar.onclick = function() {
-            eliminarEvaluador(evaluador);
+            eliminarEvaluadorLocal(evaluador);
         };
         
         card.appendChild(nombre);
@@ -260,37 +282,50 @@ function inicializarEvaluadores() {
 }
 
 // Eliminar evaluador
-function eliminarEvaluador(nombre) {
+async function eliminarEvaluadorLocal(nombre) {
     if (confirm(`¿Está seguro de eliminar el evaluador "${nombre}"? Esto también eliminará todas sus asignaciones.`)) {
-        const asignacion = configuracion.asignacionProveedores || {};
-        delete asignacion[nombre];
-        configuracion.asignacionProveedores = asignacion;
-        inicializarEvaluadores();
-        inicializarAsignaciones();
+        try {
+            await eliminarEvaluador(nombre);
+            const asignacion = configuracion.asignacionProveedores || {};
+            delete asignacion[nombre];
+            configuracion.asignacionProveedores = asignacion;
+            inicializarEvaluadores();
+            inicializarAsignaciones();
+        } catch (error) {
+            console.error('Error al eliminar evaluador:', error);
+            alert('❌ Error al eliminar el evaluador.');
+        }
     }
 }
 
 // Inicializar lista de proveedores
-function inicializarProveedores() {
-    // Construir lista de proveedores desde asignaciones si no existe
-    if (!configuracion.proveedores) {
-        configuracion.proveedores = {};
-    }
-    
-    const asignacion = configuracion.asignacionProveedores || configuracionDefault.asignacionProveedores;
-    
-    // Recopilar todos los proveedores de las asignaciones (solo si no están ya en la lista)
-    Object.keys(asignacion).forEach(evaluador => {
-        ['PRODUCTO', 'SERVICIO'].forEach(tipo => {
-            if (asignacion[evaluador] && asignacion[evaluador][tipo]) {
-                asignacion[evaluador][tipo].forEach(proveedor => {
-                    if (!configuracion.proveedores[proveedor]) {
-                        configuracion.proveedores[proveedor] = tipo;
-                    }
-                });
-            }
+async function inicializarProveedores() {
+    // Cargar proveedores desde Supabase
+    try {
+        const proveedores = await cargarProveedores();
+        configuracion.proveedores = proveedores;
+    } catch (error) {
+        console.error('Error al cargar proveedores:', error);
+        // Construir lista de proveedores desde asignaciones si no existe
+        if (!configuracion.proveedores) {
+            configuracion.proveedores = {};
+        }
+        
+        const asignacion = configuracion.asignacionProveedores || configuracionDefault.asignacionProveedores;
+        
+        // Recopilar todos los proveedores de las asignaciones (solo si no están ya en la lista)
+        Object.keys(asignacion).forEach(evaluador => {
+            ['PRODUCTO', 'SERVICIO'].forEach(tipo => {
+                if (asignacion[evaluador] && asignacion[evaluador][tipo]) {
+                    asignacion[evaluador][tipo].forEach(proveedor => {
+                        if (!configuracion.proveedores[proveedor]) {
+                            configuracion.proveedores[proveedor] = tipo;
+                        }
+                    });
+                }
+            });
         });
-    });
+    }
     
     // Mostrar lista de proveedores
     const container = document.getElementById('proveedoresList');
@@ -329,7 +364,7 @@ function inicializarProveedores() {
             btnEliminar.textContent = '🗑️';
             btnEliminar.title = 'Eliminar proveedor';
             btnEliminar.onclick = function() {
-                eliminarProveedor(proveedor);
+                eliminarProveedorLocal(proveedor);
             };
             
             card.appendChild(info);
@@ -340,25 +375,31 @@ function inicializarProveedores() {
 }
 
 // Eliminar proveedor
-function eliminarProveedor(nombre) {
+async function eliminarProveedorLocal(nombre) {
     if (confirm(`¿Está seguro de eliminar el proveedor "${nombre}"? Esto también lo eliminará de todas las asignaciones.`)) {
-        delete configuracion.proveedores[nombre];
-        
-        // Eliminar de todas las asignaciones
-        const asignacion = configuracion.asignacionProveedores || {};
-        Object.keys(asignacion).forEach(evaluador => {
-            ['PRODUCTO', 'SERVICIO'].forEach(tipo => {
-                if (asignacion[evaluador][tipo]) {
-                    const index = asignacion[evaluador][tipo].indexOf(nombre);
-                    if (index > -1) {
-                        asignacion[evaluador][tipo].splice(index, 1);
+        try {
+            await eliminarProveedor(nombre);
+            delete configuracion.proveedores[nombre];
+            
+            // Eliminar de todas las asignaciones
+            const asignacion = configuracion.asignacionProveedores || {};
+            Object.keys(asignacion).forEach(evaluador => {
+                ['PRODUCTO', 'SERVICIO'].forEach(tipo => {
+                    if (asignacion[evaluador][tipo]) {
+                        const index = asignacion[evaluador][tipo].indexOf(nombre);
+                        if (index > -1) {
+                            asignacion[evaluador][tipo].splice(index, 1);
+                        }
                     }
-                }
+                });
             });
-        });
-        
-        inicializarProveedores();
-        inicializarAsignaciones();
+            
+            inicializarProveedores();
+            inicializarAsignaciones();
+        } catch (error) {
+            console.error('Error al eliminar proveedor:', error);
+            alert('❌ Error al eliminar el proveedor.');
+        }
     }
 }
 
@@ -539,6 +580,8 @@ function inicializarEventos() {
                 return;
             }
             
+            // Crear proveedor en Supabase
+            await crearProveedor(nombre, tipo);
             configuracion.proveedores[nombre] = tipo;
             document.getElementById('nuevoProveedor').value = '';
             inicializarProveedores();

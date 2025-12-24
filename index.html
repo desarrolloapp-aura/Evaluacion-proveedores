@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Evaluación de Proveedores</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-service.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -41,14 +44,14 @@
                         <div class="step-number">2</div>
                         <div class="step-content">
                             <strong>Tipo de Proveedor</strong>
-                            <p>Selecciona si el proveedor es de <strong>PRODUCTO</strong> o <strong>SERVICIO</strong>, ya que cada tipo tiene criterios de evaluación diferentes.</p>
+                            <p>Selecciona si el proveedor es de <strong>PRODUCTO</strong> o <strong>SERVICIO</strong> ya que cada tipo tiene criterios de evaluación diferentes.</p>
                         </div>
                     </div>
                     <div class="step">
                         <div class="step-number">3</div>
                         <div class="step-content">
                             <strong>Evaluación por Ítems</strong>
-                            <p>Cada ítem se califica con: <strong>25%</strong> <strong>50%</strong> <strong>75%</strong> o <strong>100%</strong>, según el cumplimiento observado.</p>
+                            <p>Cada ítem se califica con: <strong>25%</strong> <strong>50%</strong> <strong>75%</strong> o <strong>100%</strong> según el cumplimiento observado.</p>
                         </div>
                     </div>
                     <div class="step">
@@ -164,6 +167,7 @@
     </div>
 
     <script src="script.js"></script>
+    <!-- Scripts en orden: Supabase -> Config -> Service -> Main -->
 </body>
 </html>
 
