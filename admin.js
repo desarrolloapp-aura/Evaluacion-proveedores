@@ -1241,14 +1241,22 @@ function mostrarEvaluacionesPorAnio(anio, todasEvaluaciones) {
                 // fecha_evaluacion es la fecha seleccionada en el calendario
                 const fechaEvaluacion = eval.fechaEvaluacion || eval.fecha;
                 if (fechaEvaluacion) {
-                    const fechaObj = new Date(fechaEvaluacion);
+                    // Crear fecha sin problemas de zona horaria
+                    let fechaObj;
+                    if (typeof fechaEvaluacion === 'string' && fechaEvaluacion.includes('T')) {
+                        // Si viene como ISO string, parsear correctamente
+                        const [datePart] = fechaEvaluacion.split('T');
+                        const [year, month, day] = datePart.split('-').map(Number);
+                        fechaObj = new Date(year, month - 1, day);
+                    } else {
+                        fechaObj = new Date(fechaEvaluacion);
+                    }
                     if (!isNaN(fechaObj.getTime())) {
-                        fechaEvaluacionFormateada = fechaObj.toLocaleString('es-ES', {
+                        // Solo mostrar fecha sin hora
+                        fechaEvaluacionFormateada = fechaObj.toLocaleDateString('es-ES', {
                             year: 'numeric',
                             month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
+                            day: '2-digit'
                         });
                     }
                 }
@@ -1354,16 +1362,32 @@ async function eliminarEvaluacionPorIdAdmin(id) {
     try {
         const success = await eliminarEvaluacion(id);
         if (success) {
-            alert('✅ Evaluación eliminada exitosamente.');
-            // Recargar evaluaciones
+            // Recargar evaluaciones primero
             todasEvaluacionesAdmin = await cargarEvaluaciones();
-            // Recargar la vista si hay un año seleccionado
+            
+            // Recargar la vista de evaluaciones guardadas
             const filtroAnio = document.getElementById('filtroAnio');
-            if (filtroAnio && filtroAnio.value) {
-                mostrarEvaluacionesPorAnio(parseInt(filtroAnio.value), todasEvaluacionesAdmin);
-            } else {
-                await mostrarEvaluacionesAdmin();
+            if (filtroAnio) {
+                if (filtroAnio.value) {
+                    mostrarEvaluacionesPorAnio(parseInt(filtroAnio.value), todasEvaluacionesAdmin);
+                } else {
+                    await mostrarEvaluacionesAdmin();
+                }
             }
+            
+            // También actualizar la sección de PDFs
+            const filtroAnioPDF = document.getElementById('filtroAnioPDF');
+            if (filtroAnioPDF && typeof mostrarPDFsAdmin === 'function') {
+                if (filtroAnioPDF.value) {
+                    if (typeof mostrarPDFsPorAnio === 'function') {
+                        mostrarPDFsPorAnio(parseInt(filtroAnioPDF.value), todasEvaluacionesAdmin);
+                    }
+                } else {
+                    await mostrarPDFsAdmin();
+                }
+            }
+            
+            alert('✅ Evaluación eliminada exitosamente.');
         } else {
             alert('❌ Error al eliminar la evaluación.');
         }

@@ -494,8 +494,15 @@ async function guardarEvaluacion() {
     const proveedor = document.getElementById('proveedor').value;
     const correoProveedor = document.getElementById('correoProveedor').value;
     const anioInput = document.getElementById('anioEvaluacion');
-    const fechaSeleccionada = anioInput && anioInput.value ? new Date(anioInput.value) : null;
-    const anioEvaluacion = fechaSeleccionada ? fechaSeleccionada.getFullYear() : new Date().getFullYear();
+    // Crear fecha sin problemas de zona horaria: usar la fecha seleccionada directamente
+    let fechaSeleccionada = null;
+    let anioEvaluacion = new Date().getFullYear();
+    if (anioInput && anioInput.value) {
+        // Parsear la fecha del input (formato YYYY-MM-DD) sin problemas de zona horaria
+        const [year, month, day] = anioInput.value.split('-').map(Number);
+        fechaSeleccionada = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+        anioEvaluacion = year;
+    }
     const resultadoFinal = document.getElementById('resultadoFinal').textContent;
     
     if (!evaluador || !tipoProveedor || !proveedor || !correoProveedor || !anioInput.value || resultadoFinal === '0%') {
@@ -527,8 +534,11 @@ async function guardarEvaluacion() {
     // La fecha debe ser la fecha completa del calendario, no solo el año
     let fechaEvaluacion;
     if (fechaSeleccionada) {
-        // Usar la fecha seleccionada en el calendario
-        fechaEvaluacion = fechaSeleccionada.toISOString();
+        // Crear fecha ISO en formato YYYY-MM-DD sin hora para evitar problemas de zona horaria
+        const year = fechaSeleccionada.getFullYear();
+        const month = String(fechaSeleccionada.getMonth() + 1).padStart(2, '0');
+        const day = String(fechaSeleccionada.getDate()).padStart(2, '0');
+        fechaEvaluacion = `${year}-${month}-${day}T00:00:00.000Z`; // Medianoche UTC para preservar el día
     } else {
         // Si no hay fecha seleccionada, usar la fecha actual
         fechaEvaluacion = new Date().toISOString();

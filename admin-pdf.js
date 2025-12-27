@@ -176,12 +176,21 @@ async function generarPDFIndividual(evaluacion) {
         const anio = evaluacion.anio || new Date(evaluacion.fechaEvaluacion || evaluacion.fecha || Date.now()).getFullYear();
         const resultadoFinal = parseFloat(evaluacion.resultado_final || evaluacion.resultadoFinal || 0).toFixed(2);
         const fechaEvaluacion = evaluacion.fechaEvaluacion || evaluacion.fecha || new Date().toISOString();
-        const fechaEvaluacionObj = new Date(fechaEvaluacion);
+        // Crear fecha de evaluación sin problemas de zona horaria
+        let fechaEvaluacionObj;
+        if (typeof fechaEvaluacion === 'string' && fechaEvaluacion.includes('T')) {
+            // Si viene como ISO string, parsear correctamente
+            const [datePart] = fechaEvaluacion.split('T');
+            const [year, month, day] = datePart.split('-').map(Number);
+            fechaEvaluacionObj = new Date(year, month - 1, day);
+        } else {
+            fechaEvaluacionObj = new Date(fechaEvaluacion);
+        }
         
-        // Fecha actual para el encabezado (formato: Rancagua, DD de MMMM de YYYY)
-        const fechaActual = new Date();
+        // Usar la fecha de evaluación (del calendario) para el encabezado del PDF
+        // Formato: Rancagua, DD de MMMM de YYYY
         const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-        const fechaFormateada = `Rancagua, ${fechaActual.getDate()} de ${meses[fechaActual.getMonth()]} de ${fechaActual.getFullYear()}`;
+        const fechaFormateada = `Rancagua, ${fechaEvaluacionObj.getDate()} de ${meses[fechaEvaluacionObj.getMonth()]} de ${fechaEvaluacionObj.getFullYear()}`;
         
         // Cargar logo
         const logoImg = await cargarImagen('./public/logo.jpg');
