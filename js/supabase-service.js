@@ -745,26 +745,38 @@ async function guardarEvaluacionAdmin(proveedor, item, valor) {
     }
 }
 
+async function eliminarEvaluacionAdmin(proveedor, item) {
+    await waitForSupabase();
+    try {
+        const { error } = await window.supabaseClient
+            .from('evaluaciones_admin')
+            .delete()
+            .match({ proveedor, item });
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error('Error al eliminar evaluación admin:', error);
+        return false;
+    }
+}
+
 async function cargarEvaluacionesAdmin(proveedor) {
     await waitForSupabase();
     try {
         const { data, error } = await window.supabaseClient
             .from('evaluaciones_admin')
-            .select('*')
+            .select('item, valor')
             .eq('proveedor', proveedor);
 
-        if (error) {
-            if (error.code === '42P01') return {}; // undefined_table
-            throw error;
-        }
+        if (error) throw error;
 
-        const resultados = {};
-        if (data) {
-            data.forEach(row => {
-                resultados[row.item] = row.valor;
-            });
-        }
-        return resultados;
+        // Convertir a objeto { item: valor }
+        const evaluaciones = {};
+        data.forEach(d => {
+            evaluaciones[d.item] = d.valor;
+        });
+        return evaluaciones;
     } catch (error) {
         console.error('Error al cargar evaluaciones admin:', error);
         return {};

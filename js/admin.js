@@ -693,6 +693,7 @@ function crearEditorItem(item, index, tipo) {
 
     const adminCheck = document.createElement('input');
     adminCheck.type = 'checkbox';
+    adminCheck.className = 'admin-evaluated-checkbox';
     adminCheck.checked = item.adminEvaluated || false;
     adminCheck.id = `adminCheck_${tipo}_${index}`;
 
@@ -1921,7 +1922,7 @@ function mostrarEvaluacionesPorAnio(anio, todasEvaluaciones) {
         return fechaB - fechaA;
     });
 
-    evaluacionesAnio.forEach(eval => {
+    evaluacionesAnio.forEach(evalData => {
         const div = document.createElement('div');
         div.className = 'evaluacion-item';
         // Ajustar estilos según si es móvil
@@ -1940,7 +1941,7 @@ function mostrarEvaluacionesPorAnio(anio, todasEvaluaciones) {
 
         try {
             // fecha_evaluacion es la fecha seleccionada en el calendario
-            const fechaEvaluacion = eval.fechaEvaluacion || eval.fecha;
+            const fechaEvaluacion = evalData.fechaEvaluacion || evalData.fecha;
             if (fechaEvaluacion) {
                 // Crear fecha sin problemas de zona horaria
                 let fechaObj;
@@ -1963,7 +1964,7 @@ function mostrarEvaluacionesPorAnio(anio, todasEvaluaciones) {
             }
 
             // created_at es la fecha y hora cuando se guardó en la BD
-            const fechaGuardado = eval.createdAt || eval.created_at;
+            const fechaGuardado = evalData.createdAt || evalData.created_at;
             if (fechaGuardado) {
                 const fechaObj = new Date(fechaGuardado);
                 if (!isNaN(fechaObj.getTime())) {
@@ -1978,17 +1979,17 @@ function mostrarEvaluacionesPorAnio(anio, todasEvaluaciones) {
                 }
             }
         } catch (e) {
-            console.error('Error al formatear fechas:', e, eval);
-            fechaEvaluacionFormateada = eval.fechaEvaluacion || eval.fecha || 'Fecha no disponible';
-            fechaGuardadoFormateada = eval.createdAt || eval.created_at || 'Fecha no disponible';
+            console.error('Error al formatear fechas:', e, evalData);
+            fechaEvaluacionFormateada = evalData.fechaEvaluacion || evalData.fecha || 'Fecha no disponible';
+            fechaGuardadoFormateada = evalData.createdAt || evalData.created_at || 'Fecha no disponible';
         }
 
         // Obtener valores de forma segura
-        const evaluador = eval.evaluador || 'No especificado';
-        const proveedor = eval.proveedor || 'No especificado';
-        const tipo = eval.tipo_proveedor || eval.tipo || 'No especificado';
-        const resultado = eval.resultado_final || eval.resultadoFinal || 0;
-        const anio = eval.anio || new Date(eval.fecha || Date.now()).getFullYear();
+        const evaluador = evalData.evaluador || 'No especificado';
+        const proveedor = evalData.proveedor || 'No especificado';
+        const tipo = evalData.tipo_proveedor || evalData.tipo || 'No especificado';
+        const resultado = evalData.resultado_final || evalData.resultadoFinal || 0;
+        const anio = evalData.anio || new Date(evalData.fecha || Date.now()).getFullYear();
 
         // Crear estructura más clara - ajustar estilos según si es móvil
         const esMobile = esMovil();
@@ -2546,8 +2547,11 @@ async function guardarConfiguracionCompleta() {
         document.querySelectorAll('#itemsProductoContainer .item-editor').forEach(editor => {
             const nombre = editor.querySelector('.item-nombre').value.trim();
             const ponderacion = parseInt(editor.querySelector('.ponderacion-input').value) || 0;
+            // Capturar la propiedad adminEvaluated del checkbox
+            const adminEvaluated = editor.querySelector('.admin-evaluated-checkbox')?.checked || false;
+
             if (nombre) {
-                configuracion.itemsProducto.push({ nombre, ponderacion });
+                configuracion.itemsProducto.push({ nombre, ponderacion, adminEvaluated });
             }
         });
 
@@ -2556,8 +2560,11 @@ async function guardarConfiguracionCompleta() {
         document.querySelectorAll('#itemsServicioContainer .item-editor').forEach(editor => {
             const nombre = editor.querySelector('.item-nombre').value.trim();
             const ponderacion = parseInt(editor.querySelector('.ponderacion-input').value) || 0;
+            // Capturar la propiedad adminEvaluated del checkbox
+            const adminEvaluated = editor.querySelector('.admin-evaluated-checkbox')?.checked || false;
+
             if (nombre) {
-                configuracion.itemsServicio.push({ nombre, ponderacion });
+                configuracion.itemsServicio.push({ nombre, ponderacion, adminEvaluated });
             }
         });
 
@@ -2816,8 +2823,14 @@ async function abrirEvaluacionAdmin(proveedor, tipo) {
                 const valor = select.value;
 
                 if (valor !== '') {
+                    // Si tiene valor, guardar/actualizar
                     const ok = await guardarEvaluacionAdmin(proveedor, itemNombre, parseInt(valor));
                     if (ok) successCount++; else errorCount++;
+                } else {
+                    // Si está vacío, eliminar registro (resetear)
+                    const ok = await eliminarEvaluacionAdmin(proveedor, itemNombre);
+                    // No contamos eliminación como éxito/error para el alert, o podemos contarlo como éxito silencioso
+                    if (!ok) console.error(`Error al eliminar evaluación para ${itemNombre}`);
                 }
             }
 
