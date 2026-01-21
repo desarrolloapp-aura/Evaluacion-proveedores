@@ -1226,14 +1226,36 @@ async function inicializarProveedores() {
             editBtn.style.fontSize = '1rem';
             editBtn.style.padding = '0';
             editBtn.style.margin = '0'; // Reset margins
-            editBtn.onclick = (e) => {
+            editBtn.onclick = async (e) => {
                 e.stopPropagation();
-                // Logic to edit email (prompt for now or modal integration if needed)
-                const newEmail = prompt('Editar correo para ' + displayName + ':', email || '');
-                if (newEmail !== null) {
-                    // Update email logic here (mock)
-                    configuracion.proveedores[proveedor].email = newEmail;
-                    inicializarProveedores();
+                // Logic to edit email (active)
+                const currentEmail = email === 'Sin correo' ? '' : email;
+                const newEmail = prompt('Editar correo para ' + displayName + ':', currentEmail);
+
+                if (newEmail !== null && newEmail.trim() !== currentEmail) {
+                    const finalEmail = newEmail.trim() || 'Sin correo';
+                    try {
+                        // Update in Supabase
+                        const success = await actualizarEmailProveedor(proveedor, finalEmail);
+
+                        if (success) {
+                            // Update local state and UI
+                            if (typeof configuracion.proveedores[proveedor] === 'string') {
+                                configuracion.proveedores[proveedor] = {
+                                    tipo: configuracion.proveedores[proveedor],
+                                    email: finalEmail
+                                };
+                            } else {
+                                configuracion.proveedores[proveedor].email = finalEmail;
+                            }
+
+                            inicializarProveedores();
+                            alert('✅ Correo actualizado correctamente');
+                        }
+                    } catch (error) {
+                        console.error('Error updating email:', error);
+                        alert('❌ Error al actualizar el correo');
+                    }
                 }
             };
 
