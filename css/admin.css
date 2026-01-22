@@ -1,12 +1,23 @@
 /* Estilos para Panel de Administración - Refactorizado con Sidebar */
 :root {
-    --sidebar-width: 250px;
-    --primary-color: #667eea;
-    --secondary-color: #764ba2;
-    --text-color: #333;
-    --bg-light: #f4f7f6;
+    --sidebar-width: 260px;
+    --primary-color: #3b82f6;
+    /* Royal Blue */
+    --primary-hover: #2563eb;
+    --secondary-color: #64748b;
+    /* Slate */
+    --text-color: #334155;
+    --bg-light: #f1f5f9;
+    /* Slate 100 */
     --white: #ffffff;
-    --border-color: #e0e0e0;
+    --border-color: #e2e8f0;
+    --sidebar-bg: #1e293b;
+    /* Slate 800 */
+    --sidebar-text: #cbd5e1;
+    /* Slate 300 */
+    --sidebar-active: #0f172a;
+    /* Slate 900 */
+    --sidebar-active-border: #3b82f6;
 }
 
 body {
@@ -28,19 +39,22 @@ body {
 /* Sidebar Styles */
 .admin-sidebar {
     width: var(--sidebar-width);
-    background: linear-gradient(180deg, #2c3e50 0%, #000000 100%);
-    color: white;
+    background: var(--sidebar-bg);
+    color: var(--sidebar-text);
     display: flex;
     flex-direction: column;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.05);
     z-index: 100;
 }
 
 .sidebar-header {
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.2);
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.1);
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .sidebar-header h2 {
@@ -59,25 +73,43 @@ body {
 }
 
 .menu-item {
-    padding: 15px 20px;
+    padding: 14px 24px;
     cursor: pointer;
-    transition: all 0.3s;
-    border-left: 4px solid transparent;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
     display: flex;
     align-items: center;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--sidebar-text);
+    gap: 12px;
+    font-size: 0.95rem;
 }
 
 .menu-item:hover {
     background: rgba(255, 255, 255, 0.05);
-    color: white;
+    color: #fff;
 }
 
 .menu-item.active {
-    background: rgba(102, 126, 234, 0.2);
-    border-left-color: var(--primary-color);
-    color: white;
+    background: var(--sidebar-active);
+    border-left-color: var(--sidebar-active-border);
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Icons */
+.nav-icon {
+    width: 20px;
+    height: 20px;
+    opacity: 0.9;
+}
+
+.section-icon {
+    width: 28px;
+    height: 28px;
+    margin-right: 10px;
+    vertical-align: text-bottom;
+    color: var(--primary-color);
 }
 
 .sidebar-footer {
@@ -105,21 +137,23 @@ body {
 }
 
 .btn-save-sidebar {
-    background: #28a745;
+    background: var(--primary-color);
     color: white;
 }
 
 .btn-save-sidebar:hover {
-    background: #218838;
+    background: var(--primary-hover);
 }
 
 .btn-secondary-sidebar {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--sidebar-text);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .btn-secondary-sidebar:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
 }
 
 .btn-danger-sidebar {
@@ -153,13 +187,15 @@ body {
 
 .main-header h1 {
     margin: 0;
-    font-size: 1.8rem;
-    color: #2c3e50;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-color);
 }
 
 .main-header p {
-    margin: 5px 0 0;
-    color: #666;
+    margin: 4px 0 0;
+    color: var(--secondary-color);
+    font-size: 0.95rem;
 }
 
 .content-wrapper {
@@ -196,12 +232,15 @@ body {
 }
 
 .admin-section h2 {
-    color: #2c3e50;
+    color: var(--text-color);
     margin-top: 0;
-    margin-bottom: 25px;
-    font-size: 1.5rem;
-    padding-bottom: 15px;
-    border-bottom: 2px solid #f0f0f0;
+    margin-bottom: 24px;
+    font-size: 1.25rem;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    font-weight: 600;
 }
 
 /* Mantener estilos existentes de formularios y elementos */
@@ -258,6 +297,7 @@ body {
         opacity: 0;
         transform: translateY(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -276,6 +316,7 @@ body {
         max-height: 200px;
         margin-bottom: 20px;
     }
+
     to {
         opacity: 0;
         transform: translateY(-10px);
@@ -341,20 +382,24 @@ body {
 
 /* Botones en contenido */
 .btn-add {
-    background: #28a745;
+    background: var(--primary-color);
     color: white;
     border: none;
-    padding: 12px 20px;
+    padding: 10px 20px;
     border-radius: 6px;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 500;
     transition: all 0.2s;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
 }
 
 .btn-add:hover {
-    background: #218838;
+    background: var(--primary-hover);
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
 }
 
 .btn-remove {
@@ -391,16 +436,16 @@ body {
 
 .evaluador-card,
 .proveedor-card {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border: 2px solid #e0e0e0;
-    padding: 15px 45px 15px 18px;
+    background: white;
+    border: 1px solid var(--border-color);
+    padding: 20px;
     /* Extra padding on right for button */
-    border-radius: 10px;
+    border-radius: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s ease;
     position: relative;
     /* For absolute positioning of button */
 }
@@ -427,8 +472,8 @@ body {
 .evaluador-card:hover,
 .proveedor-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
-    border-color: #667eea;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-color);
 }
 
 .btn-remove-small {
@@ -518,7 +563,7 @@ body {
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    background: var(--primary-color);
     transform: scaleX(0);
     transition: transform 0.3s ease;
 }
@@ -547,13 +592,11 @@ body {
 
 .asignacion-header h3 {
     margin: 0;
-    font-size: 1.4em;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: none;
+    -webkit-text-fill-color: initial;
 }
 
 .asignacion-content {
@@ -811,12 +854,12 @@ body {
         gap: 12px !important;
     }
 
-    .evaluacion-item > div:first-child {
+    .evaluacion-item>div:first-child {
         width: 100% !important;
         flex: 1 1 100% !important;
     }
 
-    .evaluacion-item > div:last-child {
+    .evaluacion-item>div:last-child {
         width: 100% !important;
         justify-content: center !important;
         flex: 0 0 auto !important;
@@ -841,11 +884,11 @@ body {
     }
 
     /* Reducir padding y gaps en móviles */
-    .evaluacion-item > div > div {
+    .evaluacion-item>div>div {
         gap: 8px !important;
     }
 
-    .evaluacion-item > div > div > div {
+    .evaluacion-item>div>div>div {
         padding: 4px 8px !important;
         margin-bottom: 6px !important;
     }
@@ -878,18 +921,18 @@ body {
     }
 
     /* Hacer que los elementos se apilen verticalmente en móviles */
-    .evaluacion-item > div > div[style*="flex-direction: column"] {
+    .evaluacion-item>div>div[style*="flex-direction: column"] {
         flex-direction: column !important;
         align-items: stretch !important;
     }
 
-    .evaluacion-item > div > div[style*="flex-wrap: wrap"] {
+    .evaluacion-item>div>div[style*="flex-wrap: wrap"] {
         flex-direction: column !important;
         align-items: stretch !important;
         flex-wrap: nowrap !important;
     }
 
-    .evaluacion-item > div > div > div {
+    .evaluacion-item>div>div>div {
         width: 100% !important;
         flex: 0 0 auto !important;
         margin-bottom: 6px !important;
@@ -1004,6 +1047,7 @@ body {
             opacity: 0;
             transform: translateY(-10px);
         }
+
         to {
             opacity: 1;
             transform: translateY(0);
