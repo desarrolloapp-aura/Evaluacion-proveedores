@@ -2551,9 +2551,13 @@ async function guardarConfiguracionCompleta() {
         }
 
         // Guardar información general
+        const domObjetivo = document.getElementById('objetivoEvaluacion');
+        console.log('🔍 DEBUG OBJETIVO DOM:', domObjetivo ? domObjetivo.value : 'ELEMENTO NO ENCONTRADO');
+
         configuracion.titulo = document.getElementById('tituloPrincipal').value.trim() || configuracionDefault.titulo;
         configuracion.descripcion = document.getElementById('descripcionEvaluacion').value.trim() || configuracionDefault.descripcion;
-        configuracion.objetivo = document.getElementById('objetivoEvaluacion').value.trim() || configuracionDefault.objetivo;
+        // REMOVIDO FALLBACK PARA DEBUG:
+        configuracion.objetivo = domObjetivo ? domObjetivo.value.trim() : '';
 
         // Guardar configuración de fechas
         const anioInput = document.getElementById('anioEncuesta');
