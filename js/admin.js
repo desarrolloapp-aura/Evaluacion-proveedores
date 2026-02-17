@@ -291,17 +291,6 @@ async function inicializarFormulario() {
     if (descripcionInput) descripcionInput.value = configuracion.descripcion || configuracionDefault.descripcion;
     if (objetivoInput) {
         objetivoInput.value = configuracion.objetivo || configuracionDefault.objetivo;
-
-        // MONITOR DE DEBUG
-        objetivoInput.addEventListener('input', function () {
-            console.log('📝 MONITOR TYPING:', this.value);
-        });
-        objetivoInput.addEventListener('change', function () {
-            console.log('📝 MONITOR CHANGE:', this.value);
-        });
-        objetivoInput.addEventListener('blur', function () {
-            console.log('📝 MONITOR BLUR (FOCUS LOST):', this.value);
-        });
     }
 
     // Cargar configuración de fechas
@@ -2577,19 +2566,12 @@ async function guardarConfiguracionCompleta() {
 
         // Guardar información general
 
+        // Guardar información general
+
         configuracion.titulo = document.getElementById('tituloPrincipal').value.trim() || configuracionDefault.titulo;
         configuracion.descripcion = document.getElementById('descripcionEvaluacion').value.trim() || configuracionDefault.descripcion;
-        // REMOVIDO FALLBACK PARA DEBUG:
+
         const domObjetivo = document.getElementById('objetivoEvaluacion');
-        const cantidadObjetivos = document.querySelectorAll('#objetivoEvaluacion').length;
-
-        console.log('🔍 DEBUG FINAL SAVE - OBJETIVO:');
-        console.log('   - Elemento encontrado:', !!domObjetivo);
-        console.log('   - Cantidad de elementos con ID objetivoEvaluacion:', cantidadObjetivos);
-        console.log('   - Valor en el DOM (raw):', domObjetivo ? `'${domObjetivo.value}'` : 'N/A');
-        console.log('   - Valor en el DOM (trimmed):', domObjetivo ? `'${domObjetivo.value.trim()}'` : 'N/A');
-        console.log('   - HTML del elemento:', domObjetivo ? domObjetivo.outerHTML.substring(0, 100) + '...' : 'N/A');
-
         configuracion.objetivo = domObjetivo ? domObjetivo.value.trim() : '';
 
         // Guardar configuración de fechas
