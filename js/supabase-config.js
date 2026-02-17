@@ -17,7 +17,7 @@ function initSupabase() {
 
 // Inicializar cuando se carga la página
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Esperar un momento para que Supabase se cargue
         setTimeout(initSupabase, 100);
     });

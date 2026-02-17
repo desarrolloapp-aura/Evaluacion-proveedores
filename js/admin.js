@@ -117,7 +117,10 @@ async function guardarConfiguracion() {
             return;
         }
         // Guardar configuración de evaluación (incluyendo todos los campos)
-        console.log('💾 Guardando configuración de evaluación en Supabase...');
+        console.log('💾 Guardando configuración de evaluación en Supabase...', {
+            titulo: configuracion.titulo,
+            objetivo: configuracion.objetivo
+        });
         const resultado = await guardarConfiguracionEvaluacion({
             titulo: configuracion.titulo,
             descripcion: configuracion.descripcion,

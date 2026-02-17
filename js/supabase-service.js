@@ -98,6 +98,8 @@ async function guardarConfiguracionEvaluacion(config) {
             zona_horaria_encuesta: configData.zona_horaria_encuesta
         });
 
+        console.log('📝 ENVIANDO A SUPABASE:', configData);
+
         if (existing) {
             // Actualizar
             const { data, error } = await window.supabaseClient
@@ -126,8 +128,6 @@ async function guardarConfiguracionEvaluacion(config) {
             console.log('✅ Configuración insertada correctamente:', data);
             return data;
         }
-
-        return true;
     } catch (error) {
         console.error('Error al guardar configuración:', error);
         return false;
