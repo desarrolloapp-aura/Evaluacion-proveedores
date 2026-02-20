@@ -868,7 +868,7 @@ async function mostrarItemsEvaluacion() {
             resultDiv.style.border = '1px solid #ffeeba';
             resultDiv.style.color = '#856404';
             resultDiv.style.fontWeight = 'bold';
-            resultDiv.innerHTML = `✅ Este ítem ha sido evaluado administrativamente: <span style="font-size: 1.2em;">${adminScore}%</span>`;
+            resultDiv.innerHTML = `✅ Este ítem ha sido evaluado de forma automatica por el sistema: <span style="font-size: 1.2em;">${adminScore}%</span>`;
 
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'radio';
