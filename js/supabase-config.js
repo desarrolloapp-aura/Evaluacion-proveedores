@@ -25,3 +25,57 @@ if (document.readyState === 'loading') {
     setTimeout(initSupabase, 100);
 }
 
+// ==========================================
+// PARCHE DE SEGURIDAD PARA EL LOGIN DEL ADMIN
+// ==========================================
+window.validarPasswordAdmin = async function(password) {
+    if (!window.supabaseClient) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    try {
+        const { data, error } = await window.supabaseClient
+            .rpc('verificar_admin_password', { password_ingresada: password });
+        if (error) {
+            console.error('Error en validación por RPC:', error);
+            return false;
+        }
+        return data === true;
+    } catch (error) {
+        console.error('Error de autenticación:', error);
+        return false;
+    }
+};
+
+// ==========================================
+// PARCHE DE ACCIONES EXCLUSIVAS DEL ADMIN
+// ==========================================
+
+// Sobreescribir la función de eliminar proveedor de forma segura
+window.eliminarProveedor = async function(nombreProveedor) {
+    if (!window.supabaseClient) await new Promise(resolve => setTimeout(resolve, 300));
+    try {
+        const { data, error } = await window.supabaseClient
+            .rpc('eliminar_proveedor_seguro', { nombre_p: nombreProveedor });
+
+        if (error) throw error;
+        return data === true;
+    } catch (error) {
+        console.error('Error al eliminar proveedor por RPC:', error);
+        return false;
+    }
+};
+
+// Sobreescribir la función de eliminar evaluador de forma segura
+window.eliminarEvaluador = async function(nombreEvaluador) {
+    if (!window.supabaseClient) await new Promise(resolve => setTimeout(resolve, 300));
+    try {
+        const { data, error } = await window.supabaseClient
+            .rpc('eliminar_evaluador_seguro', { nombre_e: nombreEvaluador });
+
+        if (error) throw error;
+        return data === true;
+    } catch (error) {
+        console.error('Error al eliminar evaluador por RPC:', error);
+        return false;
+    }
+};
