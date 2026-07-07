@@ -167,6 +167,7 @@
                         if (esValida) {
                             // Guardar autenticación en sessionStorage (se cierra al cerrar la pestaña)
                             sessionStorage.setItem('adminAuthenticated', 'true');
+                            sessionStorage.setItem('adminPassword', password);
                             sessionStorage.setItem('adminAuthTime', Date.now().toString());
                             window.location.href = 'admin.html';
                         } else {

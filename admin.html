@@ -26,6 +26,7 @@
             // sessionStorage se limpia automáticamente al cerrar la pestaña, pero también lo hacemos explícitamente
             window.addEventListener('beforeunload', function () {
                 sessionStorage.removeItem('adminAuthenticated');
+                sessionStorage.removeItem('adminPassword');
                 sessionStorage.removeItem('adminAuthTime');
             });
         })();
@@ -555,6 +556,7 @@
 
                     // Cerrar sesión directamente (sin confirmación adicional, el botón del sidebar ya tiene una)
                     sessionStorage.removeItem('adminAuthenticated');
+                    sessionStorage.removeItem('adminPassword');
                     sessionStorage.removeItem('adminAuthTime');
                     window.location.href = 'login-admin.html';
                 });

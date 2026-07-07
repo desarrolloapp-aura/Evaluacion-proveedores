@@ -65,13 +65,6 @@ async function cargarConfiguracionEvaluacion() {
 async function guardarConfiguracionEvaluacion(config) {
     await waitForSupabase();
     try {
-        // Verificar si ya existe una configuración
-        const { data: existing } = await window.supabaseClient
-            .from('config_evaluacion')
-            .select('id')
-            .limit(1)
-            .single();
-
         const configData = {
             titulo: config.titulo,
             descripcion: config.descripcion,
@@ -84,53 +77,22 @@ async function guardarConfiguracionEvaluacion(config) {
             zona_horaria_encuesta: config.zonaHorariaEncuesta || 'America/Santiago'
         };
 
-        console.log('💾 Datos recibidos en guardarConfiguracionEvaluacion:', {
-            anioEncuesta: config.anioEncuesta,
-            fechaInicioEncuesta: config.fechaInicioEncuesta,
-            fechaFinEncuesta: config.fechaFinEncuesta,
-            zonaHorariaEncuesta: config.zonaHorariaEncuesta
-        });
+        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
 
-        console.log('💾 Guardando en Supabase con estos valores:', {
-            anio_encuesta: configData.anio_encuesta,
-            fecha_inicio_encuesta: configData.fecha_inicio_encuesta,
-            fecha_fin_encuesta: configData.fecha_fin_encuesta,
-            zona_horaria_encuesta: configData.zona_horaria_encuesta
-        });
+        const { data, error } = await window.supabaseClient
+            .rpc('guardar_configuracion_evaluacion_seguro', { 
+                password_admin: passwordAdmin,
+                config_data: configData 
+            });
 
-        console.log('📝 ENVIANDO A SUPABASE:', configData);
-
-        if (existing) {
-            // Actualizar
-            const { data, error } = await window.supabaseClient
-                .from('config_evaluacion')
-                .update(configData)
-                .eq('id', existing.id)
-                .select();
-
-            if (error) {
-                console.error('❌ Error al guardar configuración:', error);
-                throw error;
-            }
-            console.log('✅ Configuración actualizada correctamente:', data);
-            return data;
-        } else {
-            // Insertar
-            const { data, error } = await window.supabaseClient
-                .from('config_evaluacion')
-                .insert([configData])
-                .select();
-
-            if (error) {
-                console.error('❌ Error al insertar configuración:', error);
-                throw error;
-            }
-            console.log('✅ Configuración insertada correctamente:', data);
-            return data;
+        if (error) {
+            console.error('❌ Error al guardar configuración:', error);
+            throw error;
         }
-    } catch (error) {
-        console.error('Error al guardar configuración:', error);
-        return false;
+        return data;
+    } catch (e) {
+        console.error('Error al guardar configuración:', e);
+        throw e;
     }
 }
 
@@ -241,16 +203,15 @@ async function cargarProveedores() {
 }
 
 async function actualizarEmailProveedor(nombre, email) {
-    console.log('🔵 actualizarEmailProveedor llamado con:', { nombre, email });
     await waitForSupabase();
     try {
+        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
         const { data, error } = await window.supabaseClient
-            .from('proveedores')
-            .update({ email: email })
-            .eq('nombre', nombre)
-            .select();
-
-        console.log('🔵 Respuesta de Supabase:', { data, error });
+            .rpc('actualizar_email_proveedor_seguro', { 
+                password_admin: passwordAdmin,
+                nombre_p: nombre,
+                email_p: email 
+            });
 
         if (error) throw error;
         return true;
@@ -337,61 +298,32 @@ async function cargarAsignaciones() {
 async function guardarAsignaciones(asignaciones) {
     await waitForSupabase();
     try {
-        // Obtener IDs de evaluadores y proveedores
-        const { data: evaluadores } = await window.supabaseClient
-            .from('evaluadores')
-            .select('id, nombre')
-            .eq('activo', true);
-
-        const { data: proveedores } = await window.supabaseClient
-            .from('proveedores')
-            .select('id, nombre')
-            .eq('activo', true);
-
-        const evaluadoresMap = {};
-        evaluadores.forEach(e => evaluadoresMap[e.nombre] = e.id);
-
-        const proveedoresMap = {};
-        proveedores.forEach(p => proveedoresMap[p.nombre] = p.id);
-
-        // Eliminar todas las asignaciones existentes
-        const { error: deleteError } = await window.supabaseClient
-            .from('asignaciones')
-            .delete()
-            .neq('id', 0); // Eliminar todas
-
-        if (deleteError) throw deleteError;
-
-        // Insertar nuevas asignaciones
-        const asignacionesToInsert = [];
+        const asignacionesList = [];
 
         Object.keys(asignaciones).forEach(evaluadorNombre => {
-            const evaluadorId = evaluadoresMap[evaluadorNombre];
-            if (!evaluadorId) return;
-
             ['PRODUCTO', 'SERVICIO'].forEach(tipo => {
-                asignaciones[evaluadorNombre][tipo].forEach(proveedorNombre => {
-                    const proveedorId = proveedoresMap[proveedorNombre];
-                    if (proveedorId) {
-                        asignacionesToInsert.push({
-                            evaluador_id: evaluadorId,
-                            proveedor_id: proveedorId,
+                if (asignaciones[evaluadorNombre] && Array.isArray(asignaciones[evaluadorNombre][tipo])) {
+                    asignaciones[evaluadorNombre][tipo].forEach(proveedorNombre => {
+                        asignacionesList.push({
+                            evaluador_nombre: evaluadorNombre,
+                            proveedor_nombre: proveedorNombre,
                             tipo: tipo
                         });
-                    }
-                });
+                    });
+                }
             });
         });
 
-        if (asignacionesToInsert.length > 0) {
-            const { error: insertError } = await window.supabaseClient
-                .from('asignaciones')
-                .insert(asignacionesToInsert);
+        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
 
-            if (insertError) throw insertError;
-        }
+        const { data, error } = await window.supabaseClient
+            .rpc('guardar_asignaciones_seguro', { 
+                password_admin: passwordAdmin,
+                asignaciones_list: asignacionesList 
+            });
 
-        return true;
+        if (error) throw error;
+        return data === true;
     } catch (error) {
         console.error('Error al guardar asignaciones:', error);
         return false;

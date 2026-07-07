@@ -1719,6 +1719,7 @@ function inicializarEventos() {
         btnCerrarSesion.onclick = function () {
             if (confirm('¿Está seguro de cerrar sesión?')) {
                 sessionStorage.removeItem('adminAuthenticated');
+                sessionStorage.removeItem('adminPassword');
                 sessionStorage.removeItem('adminAuthTime');
                 window.location.href = 'login-admin.html';
             }
@@ -1733,6 +1734,7 @@ function inicializarEventos() {
             console.log('Volviendo al formulario...');
             // Limpiar sesión al salir del panel de administración
             sessionStorage.removeItem('adminAuthenticated');
+            sessionStorage.removeItem('adminPassword');
             sessionStorage.removeItem('adminAuthTime');
             window.location.href = 'index.html';
         };
