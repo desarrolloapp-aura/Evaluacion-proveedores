@@ -605,40 +605,12 @@ async function actualizarPasswordAdmin(nuevaPassword) {
         // Hashear la nueva contraseña
         const passwordHash = await hashPassword(nuevaPassword);
 
-        // Verificar si ya existe un registro
-        const { data: existing, error: checkError } = await window.supabaseClient
-            .from('admin_password')
-            .select('id')
-            .order('id', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+        // Llamar a la función RPC segura para guardar el nuevo hash
+        const { data, error } = await window.supabaseClient
+            .rpc('actualizar_password_admin_segura', { nuevo_hash: passwordHash });
 
-        // Si hay error y no es "no rows", lanzar error
-        if (checkError && checkError.code !== 'PGRST116') {
-            throw checkError;
-        }
-
-        if (existing) {
-            // Actualizar
-            const { error } = await window.supabaseClient
-                .from('admin_password')
-                .update({
-                    password_hash: passwordHash,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', existing.id);
-
-            if (error) throw error;
-        } else {
-            // Insertar
-            const { error } = await window.supabaseClient
-                .from('admin_password')
-                .insert([{ password_hash: passwordHash }]);
-
-            if (error) throw error;
-        }
-
-        return true;
+        if (error) throw error;
+        return data === true;
     } catch (error) {
         console.error('Error al actualizar contraseña:', error);
         return false;
