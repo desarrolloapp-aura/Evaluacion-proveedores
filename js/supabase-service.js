@@ -31,8 +31,8 @@ async function cargarConfiguracionEvaluacion() {
     try {
         const { data, error } = await window.supabaseClient
             .from('config_evaluacion')
-            .select('*')
-            .order('id', { ascending: false })
+            .select('titulo, descripcion, objetivo, items_producto, items_servicio, anio_encuesta, fecha_inicio_encuesta, fecha_fin_encuesta, zona_horaria_encuesta')
+            .order('created_at', { ascending: false })
             .limit(1)
             .single();
 
