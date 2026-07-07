@@ -187,36 +187,8 @@ async function cargarEvaluadores() {
 async function crearEvaluador(nombre) {
     await waitForSupabase();
     try {
-        // Verificar si ya existe (activo o inactivo)
-        const { data: existente } = await window.supabaseClient
-            .from('evaluadores')
-            .select('id, activo')
-            .eq('nombre', nombre)
-            .maybeSingle();
-
-        if (existente) {
-            // Si existe pero está inactivo, reactivarlo
-            if (!existente.activo) {
-                const { data, error } = await window.supabaseClient
-                    .from('evaluadores')
-                    .update({ activo: true })
-                    .eq('id', existente.id)
-                    .select()
-                    .single();
-
-                if (error) throw error;
-                return data;
-            }
-            // Si ya existe y está activo, retornar el existente
-            return existente;
-        }
-
-        // Si no existe, crearlo
         const { data, error } = await window.supabaseClient
-            .from('evaluadores')
-            .insert([{ nombre: nombre }])
-            .select()
-            .single();
+            .rpc('crear_evaluador_seguro', { nombre_e: nombre });
 
         if (error) throw error;
         return data;
@@ -229,13 +201,11 @@ async function crearEvaluador(nombre) {
 async function eliminarEvaluador(nombre) {
     await waitForSupabase();
     try {
-        const { error } = await window.supabaseClient
-            .from('evaluadores')
-            .update({ activo: false })
-            .eq('nombre', nombre);
+        const { data, error } = await window.supabaseClient
+            .rpc('eliminar_evaluador_seguro', { nombre_e: nombre });
 
         if (error) throw error;
-        return true;
+        return data === true;
     } catch (error) {
         console.error('Error al eliminar evaluador:', error);
         return false;
@@ -293,36 +263,8 @@ async function actualizarEmailProveedor(nombre, email) {
 async function crearProveedor(nombre, tipo, email) {
     await waitForSupabase();
     try {
-        // Verificar si ya existe (activo o inactivo)
-        const { data: existente } = await window.supabaseClient
-            .from('proveedores')
-            .select('id, activo, tipo, email')
-            .eq('nombre', nombre)
-            .maybeSingle();
-
-        if (existente) {
-            // Si existe pero está inactivo o datos cambiaron, actualizar
-            if (!existente.activo || existente.tipo !== tipo || existente.email !== email) {
-                const { data, error } = await window.supabaseClient
-                    .from('proveedores')
-                    .update({ activo: true, tipo: tipo, email: email })
-                    .eq('id', existente.id)
-                    .select()
-                    .single();
-
-                if (error) throw error;
-                return data;
-            }
-            // Si ya existe y está activo, retornar el existente
-            return existente;
-        }
-
-        // Si no existe, crearlo
         const { data, error } = await window.supabaseClient
-            .from('proveedores')
-            .insert([{ nombre: nombre, tipo: tipo, email: email }])
-            .select()
-            .single();
+            .rpc('crear_proveedor_seguro', { nombre_p: nombre, tipo_p: tipo, email_p: email });
 
         if (error) throw error;
         return data;
@@ -335,13 +277,11 @@ async function crearProveedor(nombre, tipo, email) {
 async function eliminarProveedor(nombre) {
     await waitForSupabase();
     try {
-        const { error } = await window.supabaseClient
-            .from('proveedores')
-            .update({ activo: false })
-            .eq('nombre', nombre);
+        const { data, error } = await window.supabaseClient
+            .rpc('eliminar_proveedor_seguro', { nombre_p: nombre });
 
         if (error) throw error;
-        return true;
+        return data === true;
     } catch (error) {
         console.error('Error al eliminar proveedor:', error);
         return false;
