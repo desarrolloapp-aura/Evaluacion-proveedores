@@ -582,29 +582,16 @@ async function hashPassword(password) {
 async function validarPasswordAdmin(password) {
     await waitForSupabase();
     try {
-        // Hashear la contraseña ingresada
-        const passwordHash = await hashPassword(password);
-
-        // Obtener el hash almacenado en Supabase
+        // Llamar a la función RPC segura
         const { data, error } = await window.supabaseClient
-            .from('admin_password')
-            .select('password_hash')
-            .order('id', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .rpc('verificar_admin_password', { password_ingresada: password });
 
         if (error) {
-            console.error('Error al validar contraseña:', error);
+            console.error('Error al validar contraseña por RPC:', error);
             return false;
         }
 
-        if (!data || !data.password_hash) {
-            console.error('No se encontró hash de contraseña en la base de datos. Por favor, ejecuta el SQL de configuración.');
-            return false;
-        }
-
-        // Comparar hashes
-        return passwordHash === data.password_hash;
+        return data === true;
     } catch (error) {
         console.error('Error al validar contraseña:', error);
         return false;
