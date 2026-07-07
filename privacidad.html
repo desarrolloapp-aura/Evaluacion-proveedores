@@ -3,149 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Política de Privacidad - Ley N° 21.719 - AURA</title>
+    <title>Declaración de Privacidad - Ley N° 21.719 - AURA</title>
     <style>
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
-            background-color: #f8fafc;
-            color: #334155;
+            background-color: #fbfbfb;
+            color: #2d3748;
             margin: 0;
-            padding: 40px 20px;
-            line-height: 1.6;
+            padding: 60px 20px;
+            line-height: 1.7;
         }
 
-        .policy-container {
-            max-width: 800px;
+        .document-wrapper {
+            max-width: 700px;
             margin: 0 auto;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            padding: 40px;
         }
 
-        .policy-header {
-            border-bottom: 2px solid #3b82f6;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+        .document-header {
+            border-bottom: 1px solid #d2d6dc;
+            padding-bottom: 24px;
+            margin-bottom: 40px;
         }
 
-        .policy-header h1 {
-            font-size: 28px;
-            color: #0f172a;
-            margin: 0;
+        .document-header h1 {
+            font-size: 20px;
+            color: #1a202c;
+            margin: 0 0 10px 0;
             font-weight: 700;
+            letter-spacing: -0.02em;
         }
 
-        .policy-header p {
-            margin: 8px 0 0 0;
-            color: #64748b;
+        .document-header p {
+            margin: 0;
+            color: #718096;
             font-size: 14px;
         }
 
-        .policy-meta {
+        .document-meta {
             margin-top: 15px;
             font-size: 13px;
-            color: #94a3b8;
+            color: #718096;
         }
 
         h2 {
-            font-size: 18px;
-            color: #0f172a;
-            margin-top: 30px;
+            font-size: 16px;
+            color: #1a202c;
+            margin-top: 35px;
             margin-bottom: 12px;
-            font-weight: 600;
-            border-bottom: 1px solid #f1f5f9;
-            padding-bottom: 6px;
+            font-weight: 700;
         }
 
         p {
-            font-size: 15px;
-            color: #475569;
+            font-size: 14px;
+            color: #4a5568;
             margin-top: 0;
             margin-bottom: 16px;
             text-align: justify;
         }
 
-        ul {
-            margin-top: 0;
+        .sub-item {
             margin-bottom: 16px;
-            padding-left: 20px;
-            color: #475569;
-            font-size: 15px;
+            padding-left: 10px;
         }
 
-        li {
-            margin-bottom: 8px;
+        .sub-item-title {
+            font-weight: 600;
+            color: #2d3748;
+            display: block;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .sub-item-text {
+            color: #4a5568;
+            font-size: 14px;
+            margin: 0;
+            text-align: justify;
         }
 
         .actions-bar {
-            margin-top: 40px;
-            padding-top: 20px;
+            margin-top: 50px;
+            padding-top: 30px;
             border-top: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
+            text-align: center;
         }
 
-        .btn {
-            padding: 10px 22px;
-            font-size: 14px;
+        .btn-back {
+            display: inline-block;
+            padding: 10px 24px;
+            font-size: 13px;
             font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn-secondary {
+            color: #4a5568;
             background-color: #ffffff;
-            border: 1px solid #cbd5e1;
-            color: #475569;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.15s ease-in-out;
         }
 
-        .btn-secondary:hover {
-            background-color: #f8fafc;
-            border-color: #94a3b8;
-        }
-
-        .btn-primary {
-            background-color: #3b82f6;
-            border: 1px solid #3b82f6;
-            color: #ffffff;
-        }
-
-        .btn-primary:hover {
-            background-color: #2563eb;
-            border-color: #2563eb;
-        }
-
-        @media (max-width: 640px) {
-            body {
-                padding: 20px 10px;
-            }
-            .policy-container {
-                padding: 24px;
-            }
-            .actions-bar {
-                flex-direction: column;
-            }
-            .btn {
-                width: 100%;
-            }
+        .btn-back:hover {
+            background-color: #f7fafc;
+            border-color: #a0aec0;
+            color: #2d3748;
         }
 
         @media print {
             body {
                 background-color: #ffffff;
-                padding: 0;
-            }
-            .policy-container {
-                border: none;
-                box-shadow: none;
                 padding: 0;
             }
             .actions-bar {
@@ -156,13 +120,13 @@
 </head>
 <body>
 
-    <div class="policy-container">
-        <div class="policy-header">
+    <div class="document-wrapper">
+        <div class="document-header">
             <h1>Declaración de Privacidad y Transparencia</h1>
             <p>Tratamiento de Datos Personales en el Proceso de Evaluación de Proveedores</p>
-            <div class="policy-meta">
-                <span>Marco Legal: Ley N° 21.719 (República de Chile)</span><br>
-                <span>Vigencia: Diciembre 2026</span>
+            <div class="document-meta">
+                Marco Legal: Ley N° 21.719 (República de Chile)<br>
+                Fecha de Vigencia: Diciembre 2026
             </div>
         </div>
 
@@ -172,34 +136,64 @@
         <p>El responsable del tratamiento y custodia de los datos recabados en este sistema es la empresa AURA. Los datos se gestionan a nivel interno con el fin exclusivo de auditar los estándares de servicio y calidad de los proveedores adscritos.</p>
 
         <h2>2. Finalidad del Tratamiento de Datos</h2>
-        <p>Los datos recopilados a través de esta plataforma tienen como únicas finalidades:</p>
-        <ul>
-            <li>Gestionar las evaluaciones de calidad técnica, plazos y cumplimiento operativo aplicados a los proveedores.</li>
-            <li>Generar reportes estadísticos e históricos internos que ayuden a la toma de decisiones comerciales e institucionales en AURA.</li>
-            <li>Establecer canales de comunicación formales entre la administración del sistema y el personal evaluador asignado.</li>
-        </ul>
+        <p>La información recopilada a través de esta plataforma tiene como únicas finalidades:</p>
+        
+        <div class="sub-item">
+            <span class="sub-item-title">2.1 Gestión Operativa:</span>
+            <p class="sub-item-text">Gestionar las evaluaciones de calidad técnica, plazos y cumplimiento operativo aplicados a los proveedores.</p>
+        </div>
+        
+        <div class="sub-item">
+            <span class="sub-item-title">2.2 Análisis Estadístico:</span>
+            <p class="sub-item-text">Generar reportes estadísticos e históricos internos que ayuden a la toma de decisiones comerciales e institucionales en AURA.</p>
+        </div>
+        
+        <div class="sub-item">
+            <span class="sub-item-title">2.3 Control Interno:</span>
+            <p class="sub-item-text">Establecer canales de comunicación formales entre la administración del sistema y el personal evaluador asignado.</p>
+        </div>
 
         <h2>3. Datos Personales Objeto de Tratamiento</h2>
         <p>El sistema recopila y almacena únicamente las siguientes categorías de información:</p>
-        <ul>
-            <li><strong>Datos del Evaluador:</strong> Nombre completo, registro de asignaciones de proveedores y rol interno.</li>
-            <li><strong>Datos del Proveedor:</strong> Nombre comercial, tipo de servicio o producto suministrado, y dirección de correo electrónico institucional de contacto.</li>
-            <li><strong>Datos del Proceso:</strong> Calificaciones asignadas a cada ítem, comentarios cualitativos adicionales, fecha de la evaluación y resultado ponderado del análisis.</li>
-        </ul>
+
+        <div class="sub-item">
+            <span class="sub-item-title">3.1 Información del Evaluador:</span>
+            <p class="sub-item-text">Nombre completo, registro de asignaciones de proveedores y rol interno asignado en el proceso.</p>
+        </div>
+        
+        <div class="sub-item">
+            <span class="sub-item-title">3.2 Información del Proveedor:</span>
+            <p class="sub-item-text">Nombre comercial, tipo de servicio o producto suministrado, y dirección de correo electrónico institucional de contacto.</p>
+        </div>
+        
+        <div class="sub-item">
+            <span class="sub-item-title">3.3 Información del Proceso:</span>
+            <p class="sub-item-text">Calificaciones asignadas a cada ítem, comentarios cualitativos adicionales, fecha de la evaluación y resultado ponderado del análisis.</p>
+        </div>
 
         <h2>4. Medidas de Seguridad y Resguardo</h2>
         <p>AURA se compromete a mantener la confidencialidad y el resguardo de la información mediante la implementación de las siguientes medidas técnicas y administrativas:</p>
-        <ul>
-            <li><strong>Restricción de Acceso:</strong> Toda la información consolidada del panel está protegida mediante mecanismos de autenticación y validación criptográfica en base de datos. Ningún usuario no autorizado puede consultar o manipular los registros.</li>
-            <li><strong>Políticas de Acceso a Base de Datos:</strong> Se aplican políticas de seguridad a nivel de fila (Row Level Security - RLS) que aseguran que el acceso público anónimo permanezca inhabilitado para operaciones de escritura.</li>
-            <li><strong>No Transferencia:</strong> Bajo ninguna circunstancia los datos recopilados serán compartidos, vendidos o transferidos a terceros con fines de comercialización, perfilamiento publicitario o marketing ajeno al proceso de control interno de AURA.</li>
-        </ul>
+
+        <div class="sub-item">
+            <span class="sub-item-title">4.1 Restricción de Acceso:</span>
+            <p class="sub-item-text">Toda la información consolidada del panel está protegida mediante mecanismos de autenticación y validación criptográfica en base de datos. Ningún usuario no autorizado puede consultar o manipular los registros.</p>
+        </div>
+        
+        <div class="sub-item">
+            <span class="sub-item-title">4.2 Políticas de Acceso a Base de Datos:</span>
+            <p class="sub-item-text">Se aplican políticas de seguridad a nivel de fila (Row Level Security - RLS) que aseguran que el acceso público anónimo permanezca inhabilitado para operaciones de escritura.</p>
+        </div>
+        
+        <div class="sub-item">
+            <span class="sub-item-title">4.3 No Transferencia:</span>
+            <p class="sub-item-text">Bajo ninguna circunstancia los datos recopilados serán compartidos, vendidos o transferidos a terceros con fines de comercialización, perfilamiento publicitario o marketing ajeno al proceso de control interno de AURA.</p>
+        </div>
 
         <h2>5. Derechos de los Titulares (Derechos ARCO)</h2>
         <p>De acuerdo con la legislación vigente, los usuarios y titulares de los datos tratados tienen garantizados los derechos de Acceso, Rectificación, Cancelación y Oposición (Derechos ARCO). Para ejercer cualquier derecho, o ante dudas respecto al tratamiento de su información, el titular puede contactar formalmente a la administración del sistema a través de la vía de comunicación corporativa autorizada.</p>
 
-        <div class="actions-bar" style="justify-content: center;">
-            <a href="index.html" class="btn btn-secondary">Volver a la Encuesta</a>
+        <div class="actions-bar">
+            <a href="index.html" class="btn-back">Volver a la Encuesta</a>
         </div>
     </div>
 
