@@ -222,6 +222,9 @@ async function inicializar() {
         return;
     }
 
+    // Mostrar el documento solo después de validar la contraseña con éxito
+    document.documentElement.style.display = '';
+
     try {
         console.log('Iniciando panel de administración...');
 

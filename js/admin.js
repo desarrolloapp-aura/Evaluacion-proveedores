@@ -74,6 +74,9 @@ let configuracion = configuracionDefault;
         return;
     }
 
+    // Mostrar el documento solo después de validar la contraseña con éxito
+    document.documentElement.style.display = '';
+
     try {
         const loadedConfig = await cargarConfiguracion();
         if (loadedConfig) {

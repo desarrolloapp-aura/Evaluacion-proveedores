@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" style="display: none;">
 
 <head>
     <meta charset="UTF-8">
@@ -16,8 +16,9 @@
         // Verificar autenticación antes de cargar la página
         (function () {
             const isAuthenticated = sessionStorage.getItem('adminAuthenticated') === 'true';
+            const hasPassword = sessionStorage.getItem('adminPassword');
 
-            if (!isAuthenticated) {
+            if (!isAuthenticated || !hasPassword) {
                 window.location.href = 'login-admin.html';
                 return;
             }
