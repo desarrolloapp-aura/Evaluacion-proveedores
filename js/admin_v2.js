@@ -1737,7 +1737,7 @@ function inicializarEventos() {
                 }
 
                 // Actualizar contraseña
-                const resultado = await actualizarPasswordAdmin(nuevaPassword);
+                const resultado = await actualizarPasswordAdmin(nuevaPassword, passwordActual);
 
                 if (resultado) {
                     mensajePassword.textContent = '✅ Contraseña actualizada correctamente. Deberá usar la nueva contraseña en el próximo inicio de sesión.';

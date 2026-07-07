@@ -599,15 +599,18 @@ async function validarPasswordAdmin(password) {
 }
 
 // Actualizar contraseña de administrador
-async function actualizarPasswordAdmin(nuevaPassword) {
+async function actualizarPasswordAdmin(nuevaPassword, passwordActual) {
     await waitForSupabase();
     try {
         // Hashear la nueva contraseña
         const passwordHash = await hashPassword(nuevaPassword);
 
-        // Llamar a la función RPC segura para guardar el nuevo hash
+        // Llamar a la función RPC segura para guardar el nuevo hash verificando la contraseña actual
         const { data, error } = await window.supabaseClient
-            .rpc('actualizar_password_admin_segura', { nuevo_hash: passwordHash });
+            .rpc('actualizar_password_admin_segura', { 
+                password_actual: passwordActual, 
+                nuevo_hash: passwordHash 
+            });
 
         if (error) throw error;
         return data === true;
