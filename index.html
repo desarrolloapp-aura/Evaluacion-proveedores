@@ -163,7 +163,7 @@
                             ">
                             <span>
                                 Acepto el tratamiento de mis datos personales para los fines exclusivos de esta evaluación de proveedores, en conformidad con la 
-                                <a href="#" id="abrirModalPrivacidad" style="
+                                <a href="privacidad.html" target="_blank" style="
                                     color: #4f46e5;
                                     text-decoration: underline;
                                     font-weight: 600;
@@ -282,51 +282,12 @@
         </div>
     </div>
 
-    <!-- Backdrop y Drawer de Privacidad Ley 21.719 -->
-    <div id="privacyBackdrop" class="drawer-backdrop" onclick="cerrarDrawerPrivacidad()"></div>
-    <div id="privacyDrawer" class="privacy-drawer">
-        <div class="drawer-header">
-            <h2>🛡️ Privacidad y Transparencia</h2>
-            <button type="button" class="btn-close-drawer" onclick="cerrarDrawerPrivacidad()">×</button>
-        </div>
-        <div class="drawer-content">
-            <h3 style="margin-top: 0;">Ley de Protección de Datos Personales N° 21.719</h3>
-            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px;">Última actualización: Diciembre 2026 (Entrada en vigencia)</p>
-            
-            <p>En conformidad con la legislación de la República de Chile, le informamos sobre las condiciones y resguardos aplicados al tratamiento de sus datos personales:</p>
-            
-            <h3>1. Responsable del Tratamiento</h3>
-            <p>Los datos recopilados a través de este sistema de evaluación son administrados de manera exclusiva y confidencial por el área de control de proveedores de la empresa <strong>AURA</strong>.</p>
-            
-            <h3>2. Finalidad de la Recopilación</h3>
-            <p>La información tiene como único objetivo la medición objetiva del nivel de cumplimiento y calidad de los proveedores de AURA. Se procesa para auditorías y toma de decisiones comerciales.</p>
-            
-            <h3>3. Datos Personales Tratados</h3>
-            <p>Los únicos datos almacenados son: Nombre completo del evaluador que emite la calificación, listado de proveedores calificados, y las evaluaciones y comentarios ingresados en el formulario.</p>
-            
-            <h3>4. Medidas de Seguridad y Custodia</h3>
-            <p>Implementamos medidas técnicas avanzadas de base de datos como Row Level Security (RLS), previniendo cualquier fuga o acceso no autorizado. Los datos no son transferidos a terceros ni utilizados para fines de mercadotecnia.</p>
-            
-            <h3>5. Ejercicio de Derechos ARCO</h3>
-            <p>Usted conserva en todo momento sus derechos de Acceso, Rectificación, Cancelación y Oposición. Para ejercerlos, puede solicitarlo formalmente escribiendo a la administración del sistema.</p>
-        </div>
-        <div class="drawer-footer">
-            <button type="button" class="btn-print-drawer" onclick="imprimirTerminos()">
-                🖨️ Imprimir / PDF
-            </button>
-            <button type="button" class="btn-accept-drawer" onclick="aceptarTerminosDesdeDrawer()">
-                Aceptar
-            </button>
-        </div>
-    </div>
-
     <script src="js/script.js?v=56"></script>
     <script>
         // Manejo del Consentimiento de Privacidad (Ley 21.719)
         document.addEventListener('DOMContentLoaded', function() {
             const checkbox = document.getElementById('privacyConsent');
             const comenzarBtn = document.getElementById('comenzarBtn');
-            const linkPrivacidad = document.getElementById('abrirModalPrivacidad');
 
             if (checkbox && comenzarBtn) {
                 // Deshabilitar botón por defecto
@@ -346,143 +307,7 @@
                     }
                 });
             }
-
-            if (linkPrivacidad) {
-                linkPrivacidad.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    abrirDrawerPrivacidad();
-                });
-            }
         });
-
-        function abrirDrawerPrivacidad() {
-            const backdrop = document.getElementById('privacyBackdrop');
-            const drawer = document.getElementById('privacyDrawer');
-            if (backdrop && drawer) {
-                backdrop.classList.add('active');
-                setTimeout(() => {
-                    drawer.classList.add('active');
-                }, 10);
-            }
-        }
-
-        function cerrarDrawerPrivacidad() {
-            const backdrop = document.getElementById('privacyBackdrop');
-            const drawer = document.getElementById('privacyDrawer');
-            if (backdrop && drawer) {
-                drawer.classList.remove('active');
-                setTimeout(() => {
-                    backdrop.classList.remove('active');
-                }, 300);
-            }
-        }
-
-        function aceptarTerminosDesdeDrawer() {
-            const checkbox = document.getElementById('privacyConsent');
-            if (checkbox) {
-                checkbox.checked = true;
-                // Disparar el evento change manualmente
-                const event = new Event('change');
-                checkbox.dispatchEvent(event);
-            }
-            cerrarDrawerPrivacidad();
-        }
-
-        function imprimirTerminos() {
-            const vent = window.open('', '_blank');
-            if (!vent) {
-                alert('Por favor, permite las ventanas emergentes (pop-ups) para poder imprimir los términos.');
-                return;
-            }
-            const fecha = new Date().toLocaleDateString('es-CL');
-            vent.document.write(`
-                <html>
-                <head>
-                    <title>AURA - Política de Privacidad y Protección de Datos Ley 21.719</title>
-                    <style>
-                        body { 
-                            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; 
-                            padding: 40px; 
-                            color: #334155; 
-                            line-height: 1.6; 
-                            max-width: 800px;
-                            margin: 0 auto;
-                        }
-                        .header {
-                            border-bottom: 2px solid #3b82f6;
-                            padding-bottom: 15px;
-                            margin-bottom: 30px;
-                        }
-                        .header h1 { 
-                            font-size: 24px; 
-                            color: #1e293b; 
-                            margin: 0;
-                        }
-                        .header p {
-                            margin: 5px 0 0 0;
-                            color: #64748b;
-                            font-size: 14px;
-                        }
-                        h2 { 
-                            font-size: 16px; 
-                            color: #1e293b; 
-                            margin-top: 25px; 
-                            border-bottom: 1px solid #e2e8f0;
-                            padding-bottom: 5px;
-                        }
-                        p { 
-                            font-size: 14px; 
-                            color: #475569; 
-                        }
-                        .footer { 
-                            margin-top: 50px; 
-                            font-size: 12px; 
-                            color: #94a3b8; 
-                            border-top: 1px solid #e2e8f0; 
-                            padding-top: 15px; 
-                            text-align: center;
-                        }
-                        @media print {
-                            body { padding: 20px; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>AURA - Política de Transparencia y Protección de Datos Personales</h1>
-                        <p>En conformidad con la Ley N° 21.719 de la República de Chile</p>
-                        <p><strong>Fecha de emisión:</strong> ${fecha}</p>
-                    </div>
-                    
-                    <h2>1. Responsable del Tratamiento</h2>
-                    <p>Los datos recopilados a través de este sistema de evaluación son administrados de manera exclusiva y confidencial por el área de control de proveedores de la empresa AURA.</p>
-                    
-                    <h2>2. Finalidad de la Recopilación</h2>
-                    <p>La información tiene como único objetivo la medición objetiva del nivel de cumplimiento y calidad de los proveedores de AURA. Se procesa para auditorías y toma de decisiones comerciales.</p>
-                    
-                    <h2>3. Datos Personales Tratados</h2>
-                    <p>Los únicos datos almacenados son: Nombre completo del evaluador que emite la calificación, listado de proveedores calificados, y las calificaciones y comentarios cualitativos ingresados en el formulario.</p>
-                    
-                    <h2>4. Medidas de Seguridad y Custodia</h2>
-                    <p>Implementamos medidas técnicas avanzadas de base de datos como Row Level Security (RLS), previniendo cualquier fuga o acceso no autorizado. Los datos no son transferidos a terceros ni utilizados para fines de mercadotecnia.</p>
-                    
-                    <h2>5. Ejercicio de Derechos ARCO</h2>
-                    <p>Usted conserva en todo momento sus derechos de Acceso, Rectificación, Cancelación y Oposición. Para ejercerlos, puede solicitarlo formalmente escribiendo a la administración del sistema.</p>
-                    
-                    <div class="footer">
-                        Documento emitido digitalmente por el Sistema de Evaluación de Proveedores de AURA.
-                    </div>
-                    <script>
-                        window.onload = function() { 
-                            window.print(); 
-                            setTimeout(function() { window.close(); }, 500);
-                        }
-                    <\/script>
-                </body>
-                </html>
-            `);
-            vent.document.close();
-        }
     </script>
 </body>
 
