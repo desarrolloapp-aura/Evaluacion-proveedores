@@ -212,6 +212,16 @@ async function inicializarDatosPorDefecto() {
 }
 
 async function inicializar() {
+    // Validar de forma estricta que la contraseña de administrador esté presente y sea válida
+    const passwordAdmin = sessionStorage.getItem('adminPassword');
+    const esValida = await validarPasswordAdmin(passwordAdmin);
+    if (!esValida) {
+        console.error('❌ Acceso no autorizado detectado. Redirigiendo...');
+        sessionStorage.clear();
+        window.location.href = 'login-admin.html';
+        return;
+    }
+
     try {
         console.log('Iniciando panel de administración...');
 
