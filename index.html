@@ -282,42 +282,41 @@
         </div>
     </div>
 
-    <!-- Modal de Privacidad Ley 21.719 -->
-    <div id="privacyModal" class="success-modal" style="display: none; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
-        <div class="success-modal-content" style="max-width: 600px; text-align: left; padding: 30px; border-radius: 16px; background: white; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-height: 85vh; overflow-y: auto; display: block;">
-            <h2 style="color: #1e293b; font-size: 1.5rem; margin-top: 0; display: flex; align-items: center; gap: 8px;">
-                🛡️ Política de Transparencia y Privacidad
-            </h2>
-            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">
-                En cumplimiento con la <strong>Ley N° 21.719 de Protección de Datos Personales en Chile</strong>, te informamos sobre cómo tratamos tus datos en este sistema:
-            </p>
+    <!-- Backdrop y Drawer de Privacidad Ley 21.719 -->
+    <div id="privacyBackdrop" class="drawer-backdrop" onclick="cerrarDrawerPrivacidad()"></div>
+    <div id="privacyDrawer" class="privacy-drawer">
+        <div class="drawer-header">
+            <h2>🛡️ Privacidad y Transparencia</h2>
+            <button type="button" class="btn-close-drawer" onclick="cerrarDrawerPrivacidad()">×</button>
+        </div>
+        <div class="drawer-content">
+            <h3 style="margin-top: 0;">Ley de Protección de Datos Personales N° 21.719</h3>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px;">Última actualización: Diciembre 2026 (Entrada en vigencia)</p>
             
-            <div style="display: flex; flex-direction: column; gap: 15px; font-size: 0.9rem; color: #334155;">
-                <div>
-                    <strong style="color: #1e293b;">1. Identificación del Responsable:</strong>
-                    <p style="margin: 4px 0 0 0; color: #64748b; line-height: 1.4;">Los datos son procesados de forma interna por la administración de la empresa AURA.</p>
-                </div>
-                <div>
-                    <strong style="color: #1e293b;">2. Finalidad del Tratamiento:</strong>
-                    <p style="margin: 4px 0 0 0; color: #64748b; line-height: 1.4;">La información recopilada sirve exclusivamente para evaluar y medir el desempeño técnico e institucional de los proveedores de bienes y servicios vinculados a AURA.</p>
-                </div>
-                <div>
-                    <strong style="color: #1e293b;">3. Datos Recopilados:</strong>
-                    <p style="margin: 4px 0 0 0; color: #64748b; line-height: 1.4;">Se registran únicamente tu nombre como evaluador, los proveedores asignados, y las calificaciones y comentarios cualitativos que ingreses en el formulario.</p>
-                </div>
-                <div>
-                    <strong style="color: #1e293b;">4. Medidas de Seguridad y Confidencialidad:</strong>
-                    <p style="margin: 4px 0 0 0; color: #64748b; line-height: 1.4;">Los datos se guardan de forma segura en bases de datos con Row Level Security (RLS) y encriptación. Solo el personal administrador autenticado tiene acceso para consolidar resultados. Los datos jamás serán compartidos con terceros ajenos al proceso de auditoría.</p>
-                </div>
-                <div>
-                    <strong style="color: #1e293b;">5. Derechos ARCO:</strong>
-                    <p style="margin: 4px 0 0 0; color: #64748b; line-height: 1.4;">Tienes derecho a solicitar el acceso, rectificación, cancelación u oposición al tratamiento de tu información contactando al administrador del sistema.</p>
-                </div>
-            </div>
+            <p>En conformidad con la legislación de la República de Chile, le informamos sobre las condiciones y resguardos aplicados al tratamiento de sus datos personales:</p>
             
-            <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
-                <button type="button" class="success-btn" onclick="cerrarModalPrivacidad()" style="background: #4f46e5; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;">Entendido</button>
-            </div>
+            <h3>1. Responsable del Tratamiento</h3>
+            <p>Los datos recopilados a través de este sistema de evaluación son administrados de manera exclusiva y confidencial por el área de control de proveedores de la empresa <strong>AURA</strong>.</p>
+            
+            <h3>2. Finalidad de la Recopilación</h3>
+            <p>La información tiene como único objetivo la medición objetiva del nivel de cumplimiento y calidad de los proveedores de AURA. Se procesa para auditorías y toma de decisiones comerciales.</p>
+            
+            <h3>3. Datos Personales Tratados</h3>
+            <p>Los únicos datos almacenados son: Nombre completo del evaluador que emite la calificación, listado de proveedores calificados, y las evaluaciones y comentarios ingresados en el formulario.</p>
+            
+            <h3>4. Medidas de Seguridad y Custodia</h3>
+            <p>Implementamos medidas técnicas avanzadas de base de datos como Row Level Security (RLS), previniendo cualquier fuga o acceso no autorizado. Los datos no son transferidos a terceros ni utilizados para fines de mercadotecnia.</p>
+            
+            <h3>5. Ejercicio de Derechos ARCO</h3>
+            <p>Usted conserva en todo momento sus derechos de Acceso, Rectificación, Cancelación y Oposición. Para ejercerlos, puede solicitarlo formalmente escribiendo a la administración del sistema.</p>
+        </div>
+        <div class="drawer-footer">
+            <button type="button" class="btn-print-drawer" onclick="imprimirTerminos()">
+                🖨️ Imprimir / PDF
+            </button>
+            <button type="button" class="btn-accept-drawer" onclick="aceptarTerminosDesdeDrawer()">
+                Aceptar
+            </button>
         </div>
     </div>
 
@@ -328,7 +327,6 @@
             const checkbox = document.getElementById('privacyConsent');
             const comenzarBtn = document.getElementById('comenzarBtn');
             const linkPrivacidad = document.getElementById('abrirModalPrivacidad');
-            const modal = document.getElementById('privacyModal');
 
             if (checkbox && comenzarBtn) {
                 // Deshabilitar botón por defecto
@@ -349,19 +347,141 @@
                 });
             }
 
-            if (linkPrivacidad && modal) {
+            if (linkPrivacidad) {
                 linkPrivacidad.addEventListener('click', function(e) {
                     e.preventDefault();
-                    modal.style.display = 'flex';
+                    abrirDrawerPrivacidad();
                 });
             }
         });
 
-        function cerrarModalPrivacidad() {
-            const modal = document.getElementById('privacyModal');
-            if (modal) {
-                modal.style.display = 'none';
+        function abrirDrawerPrivacidad() {
+            const backdrop = document.getElementById('privacyBackdrop');
+            const drawer = document.getElementById('privacyDrawer');
+            if (backdrop && drawer) {
+                backdrop.classList.add('active');
+                setTimeout(() => {
+                    drawer.classList.add('active');
+                }, 10);
             }
+        }
+
+        function cerrarDrawerPrivacidad() {
+            const backdrop = document.getElementById('privacyBackdrop');
+            const drawer = document.getElementById('privacyDrawer');
+            if (backdrop && drawer) {
+                drawer.classList.remove('active');
+                setTimeout(() => {
+                    backdrop.classList.remove('active');
+                }, 300);
+            }
+        }
+
+        function aceptarTerminosDesdeDrawer() {
+            const checkbox = document.getElementById('privacyConsent');
+            if (checkbox) {
+                checkbox.checked = true;
+                // Disparar el evento change manualmente
+                const event = new Event('change');
+                checkbox.dispatchEvent(event);
+            }
+            cerrarDrawerPrivacidad();
+        }
+
+        function imprimirTerminos() {
+            const vent = window.open('', '_blank');
+            if (!vent) {
+                alert('Por favor, permite las ventanas emergentes (pop-ups) para poder imprimir los términos.');
+                return;
+            }
+            const fecha = new Date().toLocaleDateString('es-CL');
+            vent.document.write(`
+                <html>
+                <head>
+                    <title>AURA - Política de Privacidad y Protección de Datos Ley 21.719</title>
+                    <style>
+                        body { 
+                            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; 
+                            padding: 40px; 
+                            color: #334155; 
+                            line-height: 1.6; 
+                            max-width: 800px;
+                            margin: 0 auto;
+                        }
+                        .header {
+                            border-bottom: 2px solid #3b82f6;
+                            padding-bottom: 15px;
+                            margin-bottom: 30px;
+                        }
+                        .header h1 { 
+                            font-size: 24px; 
+                            color: #1e293b; 
+                            margin: 0;
+                        }
+                        .header p {
+                            margin: 5px 0 0 0;
+                            color: #64748b;
+                            font-size: 14px;
+                        }
+                        h2 { 
+                            font-size: 16px; 
+                            color: #1e293b; 
+                            margin-top: 25px; 
+                            border-bottom: 1px solid #e2e8f0;
+                            padding-bottom: 5px;
+                        }
+                        p { 
+                            font-size: 14px; 
+                            color: #475569; 
+                        }
+                        .footer { 
+                            margin-top: 50px; 
+                            font-size: 12px; 
+                            color: #94a3b8; 
+                            border-top: 1px solid #e2e8f0; 
+                            padding-top: 15px; 
+                            text-align: center;
+                        }
+                        @media print {
+                            body { padding: 20px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>AURA - Política de Transparencia y Protección de Datos Personales</h1>
+                        <p>En conformidad con la Ley N° 21.719 de la República de Chile</p>
+                        <p><strong>Fecha de emisión:</strong> ${fecha}</p>
+                    </div>
+                    
+                    <h2>1. Responsable del Tratamiento</h2>
+                    <p>Los datos recopilados a través de este sistema de evaluación son administrados de manera exclusiva y confidencial por el área de control de proveedores de la empresa AURA.</p>
+                    
+                    <h2>2. Finalidad de la Recopilación</h2>
+                    <p>La información tiene como único objetivo la medición objetiva del nivel de cumplimiento y calidad de los proveedores de AURA. Se procesa para auditorías y toma de decisiones comerciales.</p>
+                    
+                    <h2>3. Datos Personales Tratados</h2>
+                    <p>Los únicos datos almacenados son: Nombre completo del evaluador que emite la calificación, listado de proveedores calificados, y las calificaciones y comentarios cualitativos ingresados en el formulario.</p>
+                    
+                    <h2>4. Medidas de Seguridad y Custodia</h2>
+                    <p>Implementamos medidas técnicas avanzadas de base de datos como Row Level Security (RLS), previniendo cualquier fuga o acceso no autorizado. Los datos no son transferidos a terceros ni utilizados para fines de mercadotecnia.</p>
+                    
+                    <h2>5. Ejercicio de Derechos ARCO</h2>
+                    <p>Usted conserva en todo momento sus derechos de Acceso, Rectificación, Cancelación y Oposición. Para ejercerlos, puede solicitarlo formalmente escribiendo a la administración del sistema.</p>
+                    
+                    <div class="footer">
+                        Documento emitido digitalmente por el Sistema de Evaluación de Proveedores de AURA.
+                    </div>
+                    <script>
+                        window.onload = function() { 
+                            window.print(); 
+                            setTimeout(function() { window.close(); }, 500);
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            vent.document.close();
         }
     </script>
 </body>
