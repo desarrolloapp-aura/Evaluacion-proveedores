@@ -19,8 +19,41 @@
             const hasPassword = sessionStorage.getItem('adminPassword');
 
             if (!isAuthenticated || !hasPassword) {
-                window.location.href = 'login-admin.html';
-                return;
+                // Bloquear el acceso visualmente de inmediato y detener la carga
+                document.documentElement.innerHTML = `
+                    <head>
+                        <title>Acceso Bloqueado</title>
+                        <meta charset="UTF-8">
+                    </head>
+                    <body style="
+                        display: flex; 
+                        flex-direction: column; 
+                        justify-content: center; 
+                        align-items: center; 
+                        height: 100vh; 
+                        margin: 0;
+                        background: #0f172a; 
+                        color: #f87171; 
+                        font-family: system-ui, sans-serif;
+                    ">
+                        <h1 style="font-size: 3rem; margin: 0 0 10px 0; font-weight: 800; letter-spacing: -0.05em; text-align: center;">ACCESO BLOQUEADO</h1>
+                        <p style="color: #94a3b8; font-size: 1.1rem; margin: 0; text-align: center;">No tienes permisos para acceder a este panel de administración.</p>
+                        <a href="login-admin.html" style="
+                            margin-top: 25px; 
+                            padding: 12px 24px; 
+                            background: #ef4444; 
+                            color: white; 
+                            text-decoration: none; 
+                            border-radius: 8px; 
+                            font-weight: 600;
+                            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
+                            transition: background 0.2s;
+                        ">Ir al Login</a>
+                    </body>
+                `;
+                document.documentElement.style.display = 'block';
+                window.stop();
+                throw new Error("Acceso bloqueado.");
             }
 
             // Limpiar sesión cuando el usuario sale de la página (navegación, retroceso, cierre de pestaña)
