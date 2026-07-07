@@ -103,10 +103,27 @@
         <p>Ingrese la contraseña para acceder al panel de administración</p>
         
         <form id="loginForm">
-            <div class="form-group">
-                <label for="password">Contraseña:</label>
-                <input type="password" id="password" placeholder="Ingrese la contraseña" required autofocus>
-            </div>
+             <div class="form-group" style="position: relative;">
+                 <label for="password">Contraseña:</label>
+                 <div style="position: relative; display: flex; align-items: center; width: 100%;">
+                     <input type="password" id="password" placeholder="Ingrese la contraseña" required autofocus style="width: 100%; padding-right: 45px; box-sizing: border-box;">
+                     <button type="button" id="togglePassword" style="
+                         position: absolute;
+                         right: 12px;
+                         background: none;
+                         border: none;
+                         cursor: pointer;
+                         font-size: 1.2rem;
+                         padding: 0;
+                         margin: 0;
+                         color: #64748b;
+                         display: flex;
+                         align-items: center;
+                         justify-content: center;
+                         outline: none;
+                     ">👁️</button>
+                 </div>
+             </div>
             
             <button type="submit" class="btn-login">Acceder</button>
             
@@ -127,6 +144,19 @@
             window.location.href = 'admin.html';
         }
         
+        // Función para mostrar/ocultar contraseña
+        document.addEventListener('DOMContentLoaded', function() {
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            if (togglePassword && passwordInput) {
+                togglePassword.addEventListener('click', function () {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    this.textContent = type === 'password' ? '👁️' : '🙈';
+                });
+            }
+        });
+
         // Esperar a que todos los scripts estén cargados
         async function initLogin() {
             // Esperar a que Supabase esté listo
