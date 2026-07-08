@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/admin.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=43"></script>
-    <script src="js/supabase-service.js?v=57"></script>
+    <script src="js/supabase-service.js?v=58"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
@@ -492,8 +492,8 @@
         </main>
     </div>
 
-    <script src="js/admin-pdf.js?v=57"></script>
-    <script src="js/admin.js?v=57"></script>
+    <script src="js/admin-pdf.js?v=58"></script>
+    <script src="js/admin.js?v=58"></script>
     <script>
         // Script para manejar el menú móvil de configuración
         document.addEventListener('DOMContentLoaded', function () {
@@ -657,26 +657,6 @@
                 });
             });
 
-            // Vincular el botón de guardar del sidebar al botón original (que puede estar oculto o lo usamos directamente)
-            const guardarBtnSidebar = document.getElementById('guardarConfigBtnSidebar');
-            if (guardarBtnSidebar) {
-                guardarBtnSidebar.addEventListener('click', async function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('💾 Botón guardar sidebar clickeado');
-                    try {
-                        if (typeof guardarConfiguracionCompleta === 'function') {
-                            await guardarConfiguracionCompleta();
-                        } else {
-                            console.error('La función guardarConfiguracionCompleta no está definida');
-                            alert('Error: No se pudo guardar la configuración. Por favor, recargue la página.');
-                        }
-                    } catch (error) {
-                        console.error('Error al guardar desde sidebar:', error);
-                        alert('Error al guardar: ' + (error.message || 'Error desconocido'));
-                    }
-                });
-            }
         });
     </script>
 </body>
