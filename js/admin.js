@@ -1,5 +1,9 @@
 // Panel de Administración - Sistema de Evaluación de Proveedores
-console.log('%c Sistema de Administración v2.1 (Excel Fix) Cargado ', 'background: #222; color: #bada55; padding: 5px; border-radius: 5px;');
+// Silenciar logs informativos por seguridad (Evitar fugas visuales de nombres en F12)
+console.log = function() {};
+console.info = function() {};
+console.warn = function() {};
+console.debug = function() {};
 
 
 // Función helper para detectar si es móvil

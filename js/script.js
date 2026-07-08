@@ -1,3 +1,9 @@
+// Silenciar logs informativos por seguridad (Evitar fugas visuales de nombres en F12)
+console.log = function() {};
+console.info = function() {};
+console.warn = function() {};
+console.debug = function() {};
+
 // Asignación de proveedores por evaluador (valores por defecto)
 const asignacionProveedoresDefault = {
     'Exequiel Ledezma': {
