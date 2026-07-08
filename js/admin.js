@@ -2775,17 +2775,19 @@ async function guardarConfiguracionCompleta() {
             zonaHorariaEncuesta: configuracion.zonaHorariaEncuesta
         });
 
-        await guardarConfiguracion();
-        console.log('✅ Guardado completado exitosamente');
+        // Establecer un límite de tiempo de 10 segundos para evitar que la UI quede congelada si Supabase no responde
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor (10s). Intente de nuevo.')), 10000)
+        );
+        
+        await Promise.race([guardarConfiguracion(), timeoutPromise]);
+        console.error('✅ Guardado completado exitosamente en base de datos');
 
-        // Restaurar botón
+        // Mostrar feedback visual de éxito
         if (btnGuardar) {
             btnGuardar.disabled = false;
-            btnGuardar.textContent = textoOriginal;
-            btnGuardar.style.opacity = '1';
-            // Mostrar feedback visual de éxito
-            const textoOriginalTemp = btnGuardar.textContent;
             btnGuardar.textContent = '✅ Guardado';
+            btnGuardar.style.opacity = '1';
             btnGuardar.style.backgroundColor = '#10b981';
             setTimeout(() => {
                 btnGuardar.textContent = textoOriginal;
@@ -2796,16 +2798,15 @@ async function guardarConfiguracionCompleta() {
         console.error('❌ Error al guardar:', error);
         if (btnGuardar) {
             btnGuardar.disabled = false;
-            btnGuardar.textContent = textoOriginal;
+            btnGuardar.textContent = '❌ Error al guardar';
             btnGuardar.style.opacity = '1';
             btnGuardar.style.backgroundColor = '#ef4444';
-            btnGuardar.textContent = '❌ Error al guardar';
             setTimeout(() => {
                 btnGuardar.textContent = textoOriginal;
                 btnGuardar.style.backgroundColor = '';
             }, 3000);
         }
-        throw error; // Re-lanzar el error para que se muestre el mensaje
+        alert('❌ Error al guardar: ' + (error.message || 'Error desconocido'));
     }
 }
 
