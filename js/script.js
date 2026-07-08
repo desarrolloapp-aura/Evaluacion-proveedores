@@ -741,6 +741,12 @@ async function actualizarEstadoCategorias() {
     const labelProducto = document.getElementById('labelProducto');
     const labelServicio = document.getElementById('labelServicio');
 
+    if (evaluador && (!asignacionProveedores || !asignacionProveedores[evaluador])) {
+        if (typeof obtenerAsignacionesPublico === 'function') {
+            asignacionProveedores[evaluador] = await obtenerAsignacionesPublico(evaluador);
+        }
+    }
+
     if (!evaluador) {
         if (radioProducto) {
             radioProducto.disabled = true;
@@ -838,6 +844,12 @@ async function actualizarProveedores() {
     const hoy = new Date();
     const anioEvaluacion = hoy.getFullYear();
     const selectProveedor = document.getElementById('proveedor');
+
+    if (evaluador && (!asignacionProveedores || !asignacionProveedores[evaluador])) {
+        if (typeof obtenerAsignacionesPublico === 'function') {
+            asignacionProveedores[evaluador] = await obtenerAsignacionesPublico(evaluador);
+        }
+    }
 
     // Limpiar opciones
     selectProveedor.innerHTML = '<option value="">-- Seleccione un proveedor --</option>';

@@ -142,12 +142,9 @@ async function cargarEvaluadores() {
             data = res.data;
             error = res.error;
         } else {
-            // Cargar de forma pública (solo nombres activos)
+            // Cargar de forma pública mediante RPC seguro para evitar exponer la tabla
             const res = await window.supabaseClient
-                .from('evaluadores')
-                .select('id, nombre, activo')
-                .eq('activo', true)
-                .order('nombre');
+                .rpc('obtener_evaluadores_publico');
             data = res.data;
             error = res.error;
         }
@@ -300,41 +297,27 @@ async function eliminarProveedor(nombre) {
 async function cargarAsignaciones() {
     await waitForSupabase();
     try {
-        const { data: evaluadores } = await window.supabaseClient
-            .from('evaluadores')
-            .select('id, nombre')
-            .eq('activo', true);
-
-        if (!evaluadores) return {};
-
-        const asignaciones = {};
-
-        for (const evaluador of evaluadores) {
-            const { data: asigns } = await window.supabaseClient
-                .from('asignaciones')
-                .select(`
-                    tipo,
-                    proveedores:proveedor_id (
-                        nombre
-                    )
-                `)
-                .eq('evaluador_id', evaluador.id);
-
-            asignaciones[evaluador.nombre] = {
-                PRODUCTO: [],
-                SERVICIO: []
-            };
-
-            if (asigns) {
-                asigns.forEach(a => {
-                    if (a.proveedores && a.proveedores.nombre) {
-                        asignaciones[evaluador.nombre][a.tipo].push(a.proveedores.nombre);
+        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
+        if (passwordAdmin) {
+            // Admin: cargar todas de forma segura mediante RPC
+            const { data, error } = await window.supabaseClient
+                .rpc('cargar_asignaciones_admin', { password_admin: passwordAdmin });
+            if (error) throw error;
+            
+            const asignaciones = {};
+            if (data) {
+                data.forEach(row => {
+                    if (!asignaciones[row.evaluador_nombre]) {
+                        asignaciones[row.evaluador_nombre] = { PRODUCTO: [], SERVICIO: [] };
                     }
+                    asignaciones[row.evaluador_nombre][row.tipo].push(row.proveedor_nombre);
                 });
             }
+            return asignaciones;
+        } else {
+            // Público: no se cargan asignaciones globales al inicio para evitar fugas de nombres
+            return {};
         }
-
-        return asignaciones;
     } catch (error) {
         console.error('Error al cargar asignaciones:', error);
         return {};
@@ -435,37 +418,15 @@ async function cargarEvaluaciones() {
     }
 }
 
-// Función global para guardar evaluación
+// Función global para guardar evaluación (Llamando a RPC seguro para no requerir SELECT en evaluadores/proveedores)
 async function guardarEvaluacionEnSupabase(evaluacion) {
     await waitForSupabase();
     try {
-        // Obtener IDs
-        const { data: evaluador } = await window.supabaseClient
-            .from('evaluadores')
-            .select('id')
-            .eq('nombre', evaluacion.evaluador)
-            .eq('activo', true)
-            .single();
-
-        const { data: proveedor } = await window.supabaseClient
-            .from('proveedores')
-            .select('id')
-            .eq('nombre', evaluacion.proveedor)
-            .eq('activo', true)
-            .single();
-
-        if (!evaluador || !proveedor) {
-            throw new Error('Evaluador o proveedor no encontrado en la base de datos (IDs)');
-        }
-
         // Convertir respuestas a formato JSONB y AÑADIR METADATA DE NOMBRES
-        // Esto cumple con "tomarlo del formulario" como respaldo
         let respuestasArray = [];
         if (Array.isArray(evaluacion.respuestas)) {
-            // Ya viene como array, clonarlo para no mutar original
             respuestasArray = [...evaluacion.respuestas];
         } else {
-            // Convertir objeto a array
             Object.keys(evaluacion.respuestas).forEach(key => {
                 respuestasArray.push({
                     item: key,
@@ -478,43 +439,57 @@ async function guardarEvaluacionEnSupabase(evaluacion) {
         respuestasArray.push({
             item: '__META__',
             valor: 0,
-            evaluadorNombre: evaluacion.evaluador, // Guardar el texto literal del form
+            evaluadorNombre: evaluacion.evaluador,
             proveedorNombre: evaluacion.proveedor
         });
 
-        // Usar la fecha del calendario para fecha_evaluacion
-        // created_at se maneja automáticamente por Supabase con default now()
         const fechaEvaluacion = evaluacion.fechaEvaluacion || evaluacion.fecha || new Date().toISOString();
         const anio = evaluacion.anio || new Date(fechaEvaluacion).getFullYear();
 
-        console.log('💾 Guardando evaluación con metadatos:', evaluacion.evaluador, evaluacion.proveedor);
+        console.log('💾 Guardando evaluación con RPC público seguro:', evaluacion.evaluador, evaluacion.proveedor);
 
         const { data, error } = await window.supabaseClient
-            .from('evaluaciones')
-            .insert([{
-                evaluador_id: evaluador.id,
-                proveedor_id: proveedor.id,
+            .rpc('guardar_evaluacion_publica', {
+                evaluador_nombre: evaluacion.evaluador,
+                proveedor_nombre: evaluacion.proveedor,
                 tipo_proveedor: evaluacion.tipo,
-                correo_proveedor: evaluacion.correoProveedor || null,
+                correo_proveedor: evaluacion.correoProveedor || '',
                 respuestas: respuestasArray,
                 resultado_final: evaluacion.resultadoFinal,
-                fecha_evaluacion: fechaEvaluacion, // Fecha del calendario seleccionada
-                año: anio  // El campo en Supabase se llama "año" (con tilde)
-            }])
-            .select()
-            .single();
-
-        if (data) {
-            console.log('✅ Evaluación guardada:');
-            console.log('  - fecha_evaluacion:', data.fecha_evaluacion);
-            console.log('  - created_at:', data.created_at);
-        }
+                fecha_evaluacion: fechaEvaluacion,
+                anio: anio
+            });
 
         if (error) throw error;
-        return data;
+        return data === true;
     } catch (error) {
         console.error('Error al guardar evaluación:', error);
         throw error;
+    }
+}
+
+// Obtener asignaciones de un evaluador de forma pública mediante RPC seguro (evitando fugas de datos generales)
+async function obtenerAsignacionesPublico(evaluadorNombre) {
+    await waitForSupabase();
+    try {
+        const { data, error } = await window.supabaseClient
+            .rpc('obtener_asignaciones_publico', { evaluador_nombre: evaluadorNombre });
+        if (error) throw error;
+        
+        const asignaciones = { PRODUCTO: [], SERVICIO: [] };
+        if (data) {
+            data.forEach(item => {
+                if (item.tipo === 'PRODUCTO') {
+                    asignaciones.PRODUCTO.push(item.proveedor_nombre);
+                } else if (item.tipo === 'SERVICIO') {
+                    asignaciones.SERVICIO.push(item.proveedor_nombre);
+                }
+            });
+        }
+        return asignaciones;
+    } catch (error) {
+        console.error('Error al obtener asignaciones de evaluador:', error);
+        return { PRODUCTO: [], SERVICIO: [] };
     }
 }
 
