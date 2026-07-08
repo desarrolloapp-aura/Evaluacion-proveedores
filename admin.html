@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/admin.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=43"></script>
-    <script src="js/supabase-service.js?v=58"></script>
+    <script src="js/supabase-service.js?v=59"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
@@ -150,15 +150,6 @@
                     </svg> Configuración</li>
             </ul>
             <div class="sidebar-footer">
-                <button id="guardarConfigBtnSidebar" class="btn-save-sidebar">
-                    <svg class="nav-icon" style="margin-right:8px" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                        <polyline points="7 3 7 8 15 8"></polyline>
-                    </svg>
-                    Guardar Todo
-                </button>
                 <button id="volverBtn" class="btn-secondary-sidebar">
                     <svg class="nav-icon" style="margin-right:8px" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -187,7 +178,6 @@
 
             <!-- Menú desplegable móvil -->
             <div id="menuConfigMobileDropdown" class="menu-config-mobile-dropdown" style="display: none;">
-                <button id="guardarTodoMobile" class="menu-config-item">💾 Guardar Todo</button>
                 <button id="cambiarPasswordMobile" class="menu-config-item">🔐 Cambiar Contraseña</button>
                 <button id="cerrarSesionMobile" class="menu-config-item">🚪 Cerrar Sesión</button>
             </div>
@@ -271,6 +261,7 @@
 
                         <div id="mensajeFechas"
                             style="display: none; padding: 10px; margin-top: 15px; border-radius: 5px;"></div>
+                        <button type="button" id="guardarGeneralBtn" class="btn-add" style="margin-top:30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: 600; padding: 12px 24px; border-radius: 8px;">💾 Guardar Configuración General</button>
                     </div>
                 </section>
 
@@ -289,6 +280,7 @@
                     </h2>
                     <div id="itemsProductoContainer"></div>
                     <button type="button" id="agregarItemProducto" class="btn-add">+ Agregar Ítem</button>
+                    <button type="button" id="guardarItemsProductoBtn" class="btn-add" style="margin-top:20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: 600; padding: 12px 24px; border-radius: 8px;">💾 Guardar Ítems de Producto</button>
                 </section>
 
                 <!-- Sección: Ítems de SERVICIO -->
@@ -303,6 +295,7 @@
                     </h2>
                     <div id="itemsServicioContainer"></div>
                     <button type="button" id="agregarItemServicio" class="btn-add">+ Agregar Ítem</button>
+                    <button type="button" id="guardarItemsServicioBtn" class="btn-add" style="margin-top:20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: 600; padding: 12px 24px; border-radius: 8px;">💾 Guardar Ítems de Servicio</button>
                 </section>
 
                 <!-- Sección: Gestión de Evaluadores -->
@@ -375,6 +368,7 @@
                     <p class="section-description">Selecciona un evaluador y asigna sus proveedores correspondientes:
                     </p>
                     <div id="asignacionesContainer" class="asignaciones-container"></div>
+                    <button type="button" id="guardarAsignacionesBtn" class="btn-add" style="margin-top:30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: 600; padding: 12px 24px; border-radius: 8px;">💾 Guardar Asignaciones</button>
                 </section>
 
                 <!-- Sección: Evaluaciones Guardadas -->
@@ -492,8 +486,8 @@
         </main>
     </div>
 
-    <script src="js/admin-pdf.js?v=58"></script>
-    <script src="js/admin.js?v=58"></script>
+    <script src="js/admin-pdf.js?v=59"></script>
+    <script src="js/admin.js?v=59"></script>
     <script>
         // Script para manejar el menú móvil de configuración
         document.addEventListener('DOMContentLoaded', function () {

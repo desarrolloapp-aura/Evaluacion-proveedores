@@ -1555,28 +1555,28 @@ async function inicializarAsignaciones() {
 function inicializarEventos() {
     console.log('Inicializando eventos...');
 
-    // Guardar configuración
-    const btnGuardar = document.getElementById('guardarConfigBtn');
-    if (btnGuardar) {
-        console.log('Botón guardar encontrado');
-        btnGuardar.onclick = async function () {
-            console.log('Guardando configuración...');
-            await guardarConfiguracionCompleta();
-        };
-    } else {
-        console.log('Nota: Botón guardarConfigBtn no encontrado (posiblemente usando guardarConfigBtnSidebar)');
+    // Guardar Configuración General
+    const btnGuardarGeneral = document.getElementById('guardarGeneralBtn');
+    if (btnGuardarGeneral) {
+        btnGuardarGeneral.onclick = guardarGeneral;
     }
 
-    // Guardar configuración (Sidebar) - AGREGADO FIX
-    const btnGuardarSidebar = document.getElementById('guardarConfigBtnSidebar');
-    if (btnGuardarSidebar) {
-        console.log('Botón guardar Sidebar encontrado');
-        btnGuardarSidebar.onclick = async function () {
-            console.log('Guardando configuración desde Sidebar...');
-            await guardarConfiguracionCompleta();
-        };
-    } else {
-        console.warn('Botón guardarConfigBtnSidebar NO encontrado en el DOM');
+    // Guardar Items Producto
+    const btnGuardarItemsProducto = document.getElementById('guardarItemsProductoBtn');
+    if (btnGuardarItemsProducto) {
+        btnGuardarItemsProducto.onclick = guardarItemsProducto;
+    }
+
+    // Guardar Items Servicio
+    const btnGuardarItemsServicio = document.getElementById('guardarItemsServicioBtn');
+    if (btnGuardarItemsServicio) {
+        btnGuardarItemsServicio.onclick = guardarItemsServicio;
+    }
+
+    // Guardar Asignaciones
+    const btnGuardarAsignaciones = document.getElementById('guardarAsignacionesBtn');
+    if (btnGuardarAsignaciones) {
+        btnGuardarAsignaciones.onclick = guardarAsignacionesLocal;
     }
 
     // Agregar ítem PRODUCTO
@@ -2586,6 +2586,271 @@ function validarFechasEncuesta() {
             advertencias.map(a => `<li>${a}</li>`).join('') + '</ul>';
     } else {
         mensajeDiv.style.display = 'none';
+    }
+}
+
+async function guardarGeneral() {
+    const btn = document.getElementById('guardarGeneralBtn');
+    if (!btn) return;
+    const textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Guardando...';
+    btn.style.opacity = '0.7';
+
+    try {
+        // Validar fechas antes de guardar
+        validarFechasEncuesta();
+        const mensajeDiv = document.getElementById('mensajeFechas');
+        if (mensajeDiv && mensajeDiv.style.display === 'block' && mensajeDiv.style.backgroundColor === '#fee') {
+            if (!confirm('⚠️ Hay errores en la configuración de fechas. ¿Desea guardar de todas formas?')) {
+                btn.disabled = false;
+                btn.textContent = textoOriginal;
+                btn.style.opacity = '1';
+                return;
+            }
+        }
+
+        // Recolectar datos generales
+        configuracion.titulo = document.getElementById('tituloPrincipal').value.trim() || configuracionDefault.titulo;
+        configuracion.descripcion = document.getElementById('descripcionEvaluacion').value.trim() || configuracionDefault.descripcion;
+        const domObjetivo = document.getElementById('objetivoEvaluacion');
+        configuracion.objetivo = domObjetivo ? domObjetivo.value.trim() : '';
+
+        const anioInput = document.getElementById('anioEncuesta');
+        if (anioInput) {
+            configuracion.anioEncuesta = parseInt(anioInput.value) || new Date().getFullYear();
+        }
+
+        const fechaInicioInput = document.getElementById('fechaInicioEncuesta');
+        const horaInicioInput = document.getElementById('horaInicioEncuesta');
+        if (fechaInicioInput && fechaInicioInput.value) {
+            const [anio, mes, dia] = fechaInicioInput.value.split('-').map(Number);
+            let horas = 0, minutos = 0;
+            if (horaInicioInput && horaInicioInput.value) {
+                [horas, minutos] = horaInicioInput.value.split(':').map(Number);
+            }
+            configuracion.fechaInicioEncuesta = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}T${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:00`;
+        } else {
+            configuracion.fechaInicioEncuesta = null;
+        }
+
+        const fechaFinInput = document.getElementById('fechaFinEncuesta');
+        const horaFinInput = document.getElementById('horaFinEncuesta');
+        if (fechaFinInput && fechaFinInput.value) {
+            const [anio, mes, dia] = fechaFinInput.value.split('-').map(Number);
+            let horas = 23, minutos = 59;
+            if (horaFinInput && horaFinInput.value) {
+                [horas, minutos] = horaFinInput.value.split(':').map(Number);
+            }
+            configuracion.fechaFinEncuesta = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}T${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:00`;
+        } else {
+            configuracion.fechaFinEncuesta = null;
+        }
+
+        const zonaHorariaInput = document.getElementById('zonaHorariaEncuesta');
+        if (zonaHorariaInput) {
+            configuracion.zonaHorariaEncuesta = zonaHorariaInput.value || 'America/Santiago';
+        }
+
+        // Guardar en la base de datos
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor (10s).')), 10000)
+        );
+        await Promise.race([guardarConfiguracion(), timeoutPromise]);
+
+        btn.disabled = false;
+        btn.textContent = '✅ Guardado';
+        btn.style.opacity = '1';
+        btn.style.backgroundColor = '#10b981';
+        setTimeout(() => {
+            btn.textContent = textoOriginal;
+            btn.style.backgroundColor = '';
+        }, 2000);
+    } catch (error) {
+        console.error('❌ Error al guardar configuración general:', error);
+        btn.disabled = false;
+        btn.textContent = '❌ Error al guardar';
+        btn.style.opacity = '1';
+        btn.style.backgroundColor = '#ef4444';
+        setTimeout(() => {
+            btn.textContent = textoOriginal;
+            btn.style.backgroundColor = '';
+        }, 3000);
+        alert('❌ Error al guardar: ' + (error.message || 'Error desconocido'));
+    }
+}
+
+async function guardarItemsProducto() {
+    const btn = document.getElementById('guardarItemsProductoBtn');
+    if (!btn) return;
+    const textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Guardando...';
+    btn.style.opacity = '0.7';
+
+    try {
+        // Recolectar ítems
+        const items = [];
+        document.querySelectorAll('#itemsProductoContainer .item-editor').forEach(editor => {
+            const nombre = editor.querySelector('.item-nombre').value.trim();
+            const ponderacion = parseInt(editor.querySelector('.ponderacion-input').value) || 0;
+            const adminEvaluated = editor.querySelector('.admin-evaluated-checkbox')?.checked || false;
+            if (nombre) {
+                items.push({ nombre, ponderacion, adminEvaluated });
+            }
+        });
+
+        // Validar ponderaciones
+        const suma = items.reduce((sum, item) => sum + item.ponderacion, 0);
+        if (suma !== 100 && items.length > 0) {
+            if (!confirm(`⚠️ Advertencia: Las ponderaciones de PRODUCTO suman ${suma}% (deberían sumar exactamente 100%). ¿Desea continuar de todas formas?`)) {
+                btn.disabled = false;
+                btn.textContent = textoOriginal;
+                btn.style.opacity = '1';
+                return;
+            }
+        }
+
+        configuracion.itemsProducto = items;
+
+        // Guardar
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor (10s).')), 10000)
+        );
+        await Promise.race([guardarConfiguracion(), timeoutPromise]);
+
+        btn.disabled = false;
+        btn.textContent = '✅ Guardado';
+        btn.style.opacity = '1';
+        btn.style.backgroundColor = '#10b981';
+        setTimeout(() => {
+            btn.textContent = textoOriginal;
+            btn.style.backgroundColor = '';
+        }, 2000);
+    } catch (error) {
+        console.error('❌ Error al guardar ítems de producto:', error);
+        btn.disabled = false;
+        btn.textContent = '❌ Error al guardar';
+        btn.style.opacity = '1';
+        btn.style.backgroundColor = '#ef4444';
+        setTimeout(() => {
+            btn.textContent = textoOriginal;
+            btn.style.backgroundColor = '';
+        }, 3000);
+        alert('❌ Error al guardar: ' + (error.message || 'Error desconocido'));
+    }
+}
+
+async function guardarItemsServicio() {
+    const btn = document.getElementById('guardarItemsServicioBtn');
+    if (!btn) return;
+    const textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Guardando...';
+    btn.style.opacity = '0.7';
+
+    try {
+        // Recolectar ítems
+        const items = [];
+        document.querySelectorAll('#itemsServicioContainer .item-editor').forEach(editor => {
+            const nombre = editor.querySelector('.item-nombre').value.trim();
+            const ponderacion = parseInt(editor.querySelector('.ponderacion-input').value) || 0;
+            const adminEvaluated = editor.querySelector('.admin-evaluated-checkbox')?.checked || false;
+            if (nombre) {
+                items.push({ nombre, ponderacion, adminEvaluated });
+            }
+        });
+
+        // Validar ponderaciones
+        const suma = items.reduce((sum, item) => sum + item.ponderacion, 0);
+        if (suma !== 100 && items.length > 0) {
+            if (!confirm(`⚠️ Advertencia: Las ponderaciones de SERVICIO suman ${suma}% (deberían sumar exactamente 100%). ¿Desea continuar de todas formas?`)) {
+                btn.disabled = false;
+                btn.textContent = textoOriginal;
+                btn.style.opacity = '1';
+                return;
+            }
+        }
+
+        configuracion.itemsServicio = items;
+
+        // Guardar
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor (10s).')), 10000)
+        );
+        await Promise.race([guardarConfiguracion(), timeoutPromise]);
+
+        btn.disabled = false;
+        btn.textContent = '✅ Guardado';
+        btn.style.opacity = '1';
+        btn.style.backgroundColor = '#10b981';
+        setTimeout(() => {
+            btn.textContent = textoOriginal;
+            btn.style.backgroundColor = '';
+        }, 2000);
+    } catch (error) {
+        console.error('❌ Error al guardar ítems de servicio:', error);
+        btn.disabled = false;
+        btn.textContent = '❌ Error al guardar';
+        btn.style.opacity = '1';
+        btn.style.backgroundColor = '#ef4444';
+        setTimeout(() => {
+            btn.textContent = textoOriginal;
+            btn.style.backgroundColor = '';
+        }, 3000);
+        alert('❌ Error al guardar: ' + (error.message || 'Error desconocido'));
+    }
+}
+
+async function guardarAsignacionesLocal() {
+    const btn = document.getElementById('guardarAsignacionesBtn');
+    if (!btn) return;
+    const textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Guardando...';
+    btn.style.opacity = '0.7';
+
+    try {
+        if (!configuracion.asignacionProveedores) {
+            configuracion.asignacionProveedores = {};
+        }
+
+        // Recopilar asignaciones
+        document.querySelectorAll('select[id^="asignacion_"]').forEach(select => {
+            const evaluador = select.dataset.evaluador;
+            const tipo = select.dataset.tipo;
+            if (!configuracion.asignacionProveedores[evaluador]) {
+                configuracion.asignacionProveedores[evaluador] = { PRODUCTO: [], SERVICIO: [] };
+            }
+            const seleccionados = Array.from(select.selectedOptions).map(opt => opt.value);
+            configuracion.asignacionProveedores[evaluador][tipo] = seleccionados;
+        });
+
+        // Guardar
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor (10s).')), 10000)
+        );
+        await Promise.race([guardarConfiguracion(), timeoutPromise]);
+
+        btn.disabled = false;
+        btn.textContent = '✅ Guardado';
+        btn.style.opacity = '1';
+        btn.style.backgroundColor = '#10b981';
+        setTimeout(() => {
+            btn.textContent = textoOriginal;
+            btn.style.backgroundColor = '';
+        }, 2000);
+    } catch (error) {
+        console.error('❌ Error al guardar asignaciones:', error);
+        btn.disabled = false;
+        btn.textContent = '❌ Error al guardar';
+        btn.style.opacity = '1';
+        btn.style.backgroundColor = '#ef4444';
+        setTimeout(() => {
+            btn.textContent = textoOriginal;
+            btn.style.backgroundColor = '';
+        }, 3000);
+        alert('❌ Error al guardar: ' + (error.message || 'Error desconocido'));
     }
 }
 
