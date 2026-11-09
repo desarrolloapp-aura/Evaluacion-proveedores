@@ -96,11 +96,10 @@ const asignacionProveedoresDefault = {
     }
 };
 
-// Variables globales que se cargarán desde Supabase
-let asignacionProveedores = asignacionProveedoresDefault;
+// Las asignaciones salen de la base. La lista de ejemplo no se usa en el formulario.
+let asignacionProveedores = {};
 let evaluadores = [];
 
-// Cargar asignación de proveedores desde Supabase
 async function cargarAsignacionProveedores() {
     try {
         const asignaciones = await cargarAsignaciones();
@@ -108,9 +107,9 @@ async function cargarAsignacionProveedores() {
             return asignaciones;
         }
     } catch (e) {
-        console.error('Error al cargar asignación de proveedores desde Supabase:', e);
+        console.error('Error al cargar asignación de proveedores:', e);
     }
-    return asignacionProveedoresDefault;
+    return {};
 }
 
 // Función auxiliar para obtener proveedores de un evaluador por tipo
@@ -747,10 +746,8 @@ async function actualizarEstadoCategorias() {
     const labelProducto = document.getElementById('labelProducto');
     const labelServicio = document.getElementById('labelServicio');
 
-    if (evaluador && (!asignacionProveedores || !asignacionProveedores[evaluador])) {
-        if (typeof obtenerAsignacionesPublico === 'function') {
-            asignacionProveedores[evaluador] = await obtenerAsignacionesPublico(evaluador);
-        }
+    if (evaluador && typeof obtenerAsignacionesPublico === 'function') {
+        asignacionProveedores[evaluador] = await obtenerAsignacionesPublico(evaluador);
     }
 
     if (!evaluador) {
@@ -851,10 +848,8 @@ async function actualizarProveedores() {
     const anioEvaluacion = hoy.getFullYear();
     const selectProveedor = document.getElementById('proveedor');
 
-    if (evaluador && (!asignacionProveedores || !asignacionProveedores[evaluador])) {
-        if (typeof obtenerAsignacionesPublico === 'function') {
-            asignacionProveedores[evaluador] = await obtenerAsignacionesPublico(evaluador);
-        }
+    if (evaluador && typeof obtenerAsignacionesPublico === 'function') {
+        asignacionProveedores[evaluador] = await obtenerAsignacionesPublico(evaluador);
     }
 
     // Limpiar opciones
@@ -1202,7 +1197,7 @@ async function guardarEvaluacion() {
         }, 500);
     } catch (error) {
         console.error('Error al guardar evaluación:', error);
-        alert('❌ Error al guardar la evaluación. Por favor, intente nuevamente.');
+        alert(error.message || 'Error al guardar la evaluación. Por favor, intente nuevamente.');
     }
 }
 

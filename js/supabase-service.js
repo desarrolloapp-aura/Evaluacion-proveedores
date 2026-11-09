@@ -1,104 +1,27 @@
-// Servicio para interactuar con Supabase
-// Reemplaza las funciones de localStorage con llamadas a Supabase
+// La página habla con la API de veles (/api), conectada a la base proveedores.
 
-// Esperar a que Supabase esté listo
-function waitForSupabase() {
-    return new Promise((resolve) => {
-        if (window.supabaseClient) {
-            resolve();
-        } else {
-            let attempts = 0;
-            const maxAttempts = 50; // 5 segundos máximo
-            const checkInterval = setInterval(() => {
-                attempts++;
-                if (window.supabaseClient) {
-                    clearInterval(checkInterval);
-                    resolve();
-                } else if (attempts >= maxAttempts) {
-                    clearInterval(checkInterval);
-                    console.error('Timeout esperando Supabase');
-                    resolve(); // Resolver de todas formas para no bloquear
-                }
-            }, 100);
-        }
+async function api(path, options = {}) {
+    const headers = { ...(options.headers || {}) };
+    const password = sessionStorage.getItem('adminPassword');
+    if (password) headers['X-Admin-Password'] = password;
+    if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+    const response = await fetch(path, {
+        method: options.method || 'GET',
+        headers,
+        body: options.body !== undefined ? JSON.stringify(options.body) : undefined
     });
-}
-
-// ========== CONFIGURACIÓN DE EVALUACIÓN ==========
-
-async function cargarConfiguracionEvaluacion() {
-    await waitForSupabase();
-    try {
-        const { data, error } = await window.supabaseClient
-            .from('config_evaluacion')
-            .select('titulo, descripcion, objetivo, items_producto, items_servicio, anio_encuesta, fecha_inicio_encuesta, fecha_fin_encuesta, zona_horaria_encuesta')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-            console.error('Error al cargar configuración:', error);
-            return getConfiguracionDefault();
-        }
-
-        if (data) {
-            return {
-                titulo: data.titulo,
-                descripcion: data.descripcion,
-                objetivo: data.objetivo,
-                itemsProducto: data.items_producto || [],
-                itemsServicio: data.items_servicio || [],
-                anioEncuesta: data.anio_encuesta || new Date().getFullYear(),
-                fechaInicioEncuesta: data.fecha_inicio_encuesta || null,
-                fechaFinEncuesta: data.fecha_fin_encuesta || null,
-                zonaHorariaEncuesta: data.zona_horaria_encuesta || 'America/Santiago'
-            };
-        }
-
-        return getConfiguracionDefault();
-    } catch (e) {
-        console.error('Error al cargar configuración:', e);
-        return getConfiguracionDefault();
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!response.ok) {
+        const error = new Error((data && data.error) || 'Error de servidor');
+        error.status = response.status;
+        throw error;
     }
-}
-
-async function guardarConfiguracionEvaluacion(config) {
-    await waitForSupabase();
-    try {
-        const configData = {
-            titulo: config.titulo,
-            descripcion: config.descripcion,
-            objetivo: config.objetivo,
-            items_producto: config.itemsProducto,
-            items_servicio: config.itemsServicio,
-            anio_encuesta: config.anioEncuesta || null,
-            fecha_inicio_encuesta: config.fechaInicioEncuesta || null,
-            fecha_fin_encuesta: config.fechaFinEncuesta || null,
-            zona_horaria_encuesta: config.zonaHorariaEncuesta || 'America/Santiago'
-        };
-
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-
-        const { data, error } = await window.supabaseClient
-            .rpc('guardar_configuracion_evaluacion_seguro', { 
-                password_admin: passwordAdmin,
-                config_data: configData 
-            });
-
-        if (error) {
-            console.error('❌ Error al guardar configuración:', error);
-            throw error;
-        }
-        return data;
-    } catch (e) {
-        console.error('Error al guardar configuración:', e);
-        throw e;
-    }
+    return data;
 }
 
 function getConfiguracionDefault() {
-    const hoy = new Date();
-    const anioActual = hoy.getFullYear();
+    const anioActual = new Date().getFullYear();
     return {
         titulo: 'Evaluación de Proveedores',
         descripcion: 'Este sistema permite evaluar el desempeño de nuestros proveedores mediante un proceso estructurado y objetivo, considerando diferentes aspectos según el tipo de proveedor (Producto o Servicio).',
@@ -127,30 +50,50 @@ function getConfiguracionDefault() {
     };
 }
 
-// ========== EVALUADORES ==========
+async function cargarConfiguracionEvaluacion() {
+    try {
+        const data = await api('/api/config');
+        if (!data) return getConfiguracionDefault();
+        return {
+            titulo: data.titulo,
+            descripcion: data.descripcion,
+            objetivo: data.objetivo,
+            itemsProducto: data.items_producto || [],
+            itemsServicio: data.items_servicio || [],
+            anioEncuesta: data.anio_encuesta || new Date().getFullYear(),
+            fechaInicioEncuesta: data.fecha_inicio_encuesta || null,
+            fechaFinEncuesta: data.fecha_fin_encuesta || null,
+            zonaHorariaEncuesta: data.zona_horaria_encuesta || 'America/Santiago'
+        };
+    } catch (error) {
+        console.error('Error al cargar configuración:', error);
+        return getConfiguracionDefault();
+    }
+}
+
+async function guardarConfiguracionEvaluacion(config) {
+    await api('/api/config', {
+        method: 'PUT',
+        body: {
+            titulo: config.titulo,
+            descripcion: config.descripcion,
+            objetivo: config.objetivo,
+            items_producto: config.itemsProducto,
+            items_servicio: config.itemsServicio,
+            anio_encuesta: config.anioEncuesta || null,
+            fecha_inicio_encuesta: config.fechaInicioEncuesta || null,
+            fecha_fin_encuesta: config.fechaFinEncuesta || null,
+            zona_horaria_encuesta: config.zonaHorariaEncuesta || 'America/Santiago'
+        }
+    });
+    return true;
+}
 
 async function cargarEvaluadores() {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword');
-        let data, error;
-
-        if (passwordAdmin) {
-            // Cargar de forma segura para administrador
-            const res = await window.supabaseClient
-                .rpc('cargar_evaluadores_admin', { password_admin: passwordAdmin });
-            data = res.data;
-            error = res.error;
-        } else {
-            // Cargar de forma pública mediante RPC seguro para evitar exponer la tabla
-            const res = await window.supabaseClient
-                .rpc('obtener_evaluadores_publico');
-            data = res.data;
-            error = res.error;
-        }
-
-        if (error) throw error;
-        return data.map(e => e.nombre);
+        const admin = sessionStorage.getItem('adminPassword') ? '?admin=1' : '';
+        const data = await api('/api/evaluadores' + admin);
+        return (data || []).map(e => e.nombre);
     } catch (error) {
         console.error('Error al cargar evaluadores:', error);
         return [];
@@ -158,76 +101,27 @@ async function cargarEvaluadores() {
 }
 
 async function crearEvaluador(nombre) {
-    await waitForSupabase();
-    try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        const { data, error } = await window.supabaseClient
-            .rpc('crear_evaluador_seguro', { 
-                password_admin: passwordAdmin,
-                nombre_e: nombre 
-            });
-
-        if (error) throw error;
-        return data;
-    } catch (error) {
-        console.error('Error al crear evaluador:', error);
-        throw error;
-    }
+    return api('/api/evaluadores', { method: 'POST', body: { nombre } });
 }
 
 async function eliminarEvaluador(nombre) {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        const { data, error } = await window.supabaseClient
-            .rpc('eliminar_evaluador_seguro', { 
-                password_admin: passwordAdmin,
-                nombre_e: nombre 
-            });
-
-        if (error) throw error;
-        return data === true;
+        await api('/api/evaluadores', { method: 'DELETE', body: { nombre } });
+        return true;
     } catch (error) {
         console.error('Error al eliminar evaluador:', error);
         return false;
     }
 }
 
-// ========== PROVEEDORES ==========
-
 async function cargarProveedores() {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword');
-        let data, error;
-
-        if (passwordAdmin) {
-            // Cargar de forma segura para administrador (con email)
-            const res = await window.supabaseClient
-                .rpc('cargar_proveedores_admin', { password_admin: passwordAdmin });
-            data = res.data;
-            error = res.error;
-        } else {
-            // Cargar de forma pública (solo nombre y tipo)
-            const res = await window.supabaseClient
-                .from('proveedores')
-                .select('id, nombre, tipo, activo')
-                .eq('activo', true)
-                .order('nombre');
-            data = res.data;
-            error = res.error;
-        }
-
-        if (error) throw error;
-
+        const admin = sessionStorage.getItem('adminPassword') ? '?admin=1' : '';
+        const data = await api('/api/proveedores' + admin);
         const proveedoresObj = {};
-        data.forEach(p => {
-            proveedoresObj[p.nombre] = {
-                tipo: p.tipo,
-                email: p.email || ''
-            };
+        (data || []).forEach(p => {
+            proveedoresObj[p.nombre] = { tipo: p.tipo, email: p.email || '' };
         });
-
         return proveedoresObj;
     } catch (error) {
         console.error('Error al cargar proveedores:', error);
@@ -236,88 +130,36 @@ async function cargarProveedores() {
 }
 
 async function actualizarEmailProveedor(nombre, email) {
-    await waitForSupabase();
-    try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        const { data, error } = await window.supabaseClient
-            .rpc('actualizar_email_proveedor_seguro', { 
-                password_admin: passwordAdmin,
-                nombre_p: nombre,
-                email_p: email 
-            });
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error al actualizar email proveedor:', error);
-        throw error;
-    }
+    await api('/api/proveedores/email', { method: 'PATCH', body: { nombre, email } });
+    return true;
 }
 
 async function crearProveedor(nombre, tipo, email) {
-    await waitForSupabase();
-    try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        const { data, error } = await window.supabaseClient
-            .rpc('crear_proveedor_seguro', { 
-                password_admin: passwordAdmin,
-                nombre_p: nombre, 
-                tipo_p: tipo, 
-                email_p: email 
-            });
-
-        if (error) throw error;
-        return data;
-    } catch (error) {
-        console.error('Error al crear proveedor:', error);
-        throw error;
-    }
+    return api('/api/proveedores', { method: 'POST', body: { nombre, tipo, email } });
 }
 
 async function eliminarProveedor(nombre) {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        const { data, error } = await window.supabaseClient
-            .rpc('eliminar_proveedor_seguro', { 
-                password_admin: passwordAdmin,
-                nombre_p: nombre 
-            });
-
-        if (error) throw error;
-        return data === true;
+        await api('/api/proveedores', { method: 'DELETE', body: { nombre } });
+        return true;
     } catch (error) {
         console.error('Error al eliminar proveedor:', error);
         return false;
     }
 }
 
-// ========== ASIGNACIONES ==========
-
 async function cargarAsignaciones() {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        if (passwordAdmin) {
-            // Admin: cargar todas de forma segura mediante RPC
-            const { data, error } = await window.supabaseClient
-                .rpc('cargar_asignaciones_admin', { password_admin: passwordAdmin });
-            if (error) throw error;
-            
-            const asignaciones = {};
-            if (data) {
-                data.forEach(row => {
-                    if (!asignaciones[row.evaluador_nombre]) {
-                        asignaciones[row.evaluador_nombre] = { PRODUCTO: [], SERVICIO: [] };
-                    }
-                    asignaciones[row.evaluador_nombre][row.tipo].push(row.proveedor_nombre);
-                });
+        if (!sessionStorage.getItem('adminPassword')) return {};
+        const data = await api('/api/asignaciones');
+        const asignaciones = {};
+        (data || []).forEach(row => {
+            if (!asignaciones[row.evaluador_nombre]) {
+                asignaciones[row.evaluador_nombre] = { PRODUCTO: [], SERVICIO: [] };
             }
-            return asignaciones;
-        } else {
-            // Público: no se cargan asignaciones globales al inicio para evitar fugas de nombres
-            return {};
-        }
+            asignaciones[row.evaluador_nombre][row.tipo].push(row.proveedor_nombre);
+        });
+        return asignaciones;
     } catch (error) {
         console.error('Error al cargar asignaciones:', error);
         return {};
@@ -325,10 +167,8 @@ async function cargarAsignaciones() {
 }
 
 async function guardarAsignaciones(asignaciones) {
-    await waitForSupabase();
     try {
         const asignacionesList = [];
-
         Object.keys(asignaciones).forEach(evaluadorNombre => {
             ['PRODUCTO', 'SERVICIO'].forEach(tipo => {
                 if (asignaciones[evaluadorNombre] && Array.isArray(asignaciones[evaluadorNombre][tipo])) {
@@ -342,62 +182,34 @@ async function guardarAsignaciones(asignaciones) {
                 }
             });
         });
-
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-
-        const { data, error } = await window.supabaseClient
-            .rpc('guardar_asignaciones_seguro', { 
-                password_admin: passwordAdmin,
-                asignaciones_list: asignacionesList 
-            });
-
-        if (error) throw error;
-        return data === true;
+        await api('/api/asignaciones', { method: 'PUT', body: { asignaciones: asignacionesList } });
+        return true;
     } catch (error) {
         console.error('Error al guardar asignaciones:', error);
         return false;
     }
 }
 
-// ========== EVALUACIONES ==========
-
 async function cargarEvaluaciones() {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword');
-        if (!passwordAdmin) return [];
-
-        const { data, error } = await window.supabaseClient
-            .rpc('cargar_evaluaciones_admin', { password_admin: passwordAdmin });
-
-        if (error) throw error;
-
-        return data.map(e => {
-            // Helper to see if we have metadata in responses
+        if (!sessionStorage.getItem('adminPassword')) return [];
+        const data = await api('/api/evaluaciones');
+        return (data || []).map(e => {
             let metaEvaluador = null;
             let metaProveedor = null;
             let cleanRespuestas = e.respuestas;
-
             if (Array.isArray(e.respuestas)) {
                 const metaItem = e.respuestas.find(r => r.item === '__META__');
                 if (metaItem) {
                     metaEvaluador = metaItem.evaluadorNombre;
                     metaProveedor = metaItem.proveedorNombre;
-                    // Hide metadata from normal usage
                     cleanRespuestas = e.respuestas.filter(r => r.item !== '__META__');
                 }
             }
-
-            // Helper to safely extract name from joined relation or metadata
-            const getNombre = (joinedName, metaName) => {
-                if (metaName) return metaName; // Prioritize saved metadata (what was on the form)
-                return joinedName || 'No especificado';
-            };
-
+            const getNombre = (joinedName, metaName) => metaName || joinedName || 'No especificado';
             const fechaEvaluacion = e.fecha_evaluacion || new Date().toISOString();
             const createdAt = e.created_at || new Date().toISOString();
             const anio = e.año || e.anio || new Date(fechaEvaluacion).getFullYear();
-
             return {
                 id: e.id,
                 evaluador: getNombre(e.evaluador_nombre, metaEvaluador),
@@ -406,9 +218,9 @@ async function cargarEvaluaciones() {
                 correoProveedor: e.correo_proveedor,
                 respuestas: cleanRespuestas,
                 resultadoFinal: e.resultado_final,
-                fechaEvaluacion: fechaEvaluacion, // Fecha del calendario (fecha_evaluacion)
-                createdAt: createdAt, // Fecha de guardado (created_at)
-                fecha: fechaEvaluacion, // Mantener compatibilidad con código existente
+                fechaEvaluacion: fechaEvaluacion,
+                createdAt: createdAt,
+                fecha: fechaEvaluacion,
                 anio: anio
             };
         });
@@ -418,74 +230,47 @@ async function cargarEvaluaciones() {
     }
 }
 
-// Función global para guardar evaluación (Llamando a RPC seguro para no requerir SELECT en evaluadores/proveedores)
 async function guardarEvaluacionEnSupabase(evaluacion) {
-    await waitForSupabase();
-    try {
-        // Convertir respuestas a formato JSONB y AÑADIR METADATA DE NOMBRES
-        let respuestasArray = [];
-        if (Array.isArray(evaluacion.respuestas)) {
-            respuestasArray = [...evaluacion.respuestas];
-        } else {
-            Object.keys(evaluacion.respuestas).forEach(key => {
-                respuestasArray.push({
-                    item: key,
-                    valor: evaluacion.respuestas[key]
-                });
-            });
-        }
-
-        // Inject Metadata
-        respuestasArray.push({
-            item: '__META__',
-            valor: 0,
-            evaluadorNombre: evaluacion.evaluador,
-            proveedorNombre: evaluacion.proveedor
+    let respuestasArray = [];
+    if (Array.isArray(evaluacion.respuestas)) {
+        respuestasArray = [...evaluacion.respuestas];
+    } else {
+        Object.keys(evaluacion.respuestas || {}).forEach(key => {
+            respuestasArray.push({ item: key, valor: evaluacion.respuestas[key] });
         });
-
-        const fechaEvaluacion = evaluacion.fechaEvaluacion || evaluacion.fecha || new Date().toISOString();
-        const anio = evaluacion.anio || new Date(fechaEvaluacion).getFullYear();
-
-        console.log('💾 Guardando evaluación con RPC público seguro:', evaluacion.evaluador, evaluacion.proveedor);
-
-        const { data, error } = await window.supabaseClient
-            .rpc('guardar_evaluacion_publica', {
-                evaluador_nombre: evaluacion.evaluador,
-                proveedor_nombre: evaluacion.proveedor,
-                tipo_proveedor: evaluacion.tipo,
-                correo_proveedor: evaluacion.correoProveedor || '',
-                respuestas: respuestasArray,
-                resultado_final: evaluacion.resultadoFinal,
-                fecha_evaluacion: fechaEvaluacion,
-                anio: anio
-            });
-
-        if (error) throw error;
-        return data === true;
-    } catch (error) {
-        console.error('Error al guardar evaluación:', error);
-        throw error;
     }
+    respuestasArray.push({
+        item: '__META__',
+        valor: 0,
+        evaluadorNombre: evaluacion.evaluador,
+        proveedorNombre: evaluacion.proveedor
+    });
+    const fechaEvaluacion = evaluacion.fechaEvaluacion || evaluacion.fecha || new Date().toISOString();
+    await api('/api/evaluaciones', {
+        method: 'POST',
+        body: {
+            evaluador: evaluacion.evaluador,
+            proveedor: evaluacion.proveedor,
+            tipo: evaluacion.tipo,
+            correoProveedor: evaluacion.correoProveedor || '',
+            respuestas: respuestasArray,
+            resultadoFinal: evaluacion.resultadoFinal,
+            fechaEvaluacion: fechaEvaluacion,
+            anio: evaluacion.anio || new Date(fechaEvaluacion).getFullYear()
+        }
+    });
+    return true;
 }
 
-// Obtener asignaciones de un evaluador de forma pública mediante RPC seguro (evitando fugas de datos generales)
 async function obtenerAsignacionesPublico(evaluadorNombre) {
-    await waitForSupabase();
     try {
-        const { data, error } = await window.supabaseClient
-            .rpc('obtener_asignaciones_publico', { evaluador_nombre: evaluadorNombre });
-        if (error) throw error;
-        
+        const data = await api('/api/asignaciones/publico?evaluador=' + encodeURIComponent(evaluadorNombre));
         const asignaciones = { PRODUCTO: [], SERVICIO: [] };
-        if (data) {
-            data.forEach(item => {
-                if (item.tipo === 'PRODUCTO') {
-                    asignaciones.PRODUCTO.push(item.proveedor_nombre);
-                } else if (item.tipo === 'SERVICIO') {
-                    asignaciones.SERVICIO.push(item.proveedor_nombre);
-                }
-            });
-        }
+        (data || []).forEach(item => {
+            if (item.tipo === 'PRODUCTO' || item.tipo === 'SERVICIO') {
+                asignaciones[item.tipo].push(item.proveedor_nombre);
+            }
+        });
         return asignaciones;
     } catch (error) {
         console.error('Error al obtener asignaciones de evaluador:', error);
@@ -494,16 +279,8 @@ async function obtenerAsignacionesPublico(evaluadorNombre) {
 }
 
 async function eliminarEvaluacion(id) {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        const { error } = await window.supabaseClient
-            .rpc('eliminar_evaluacion_segura', { 
-                password_admin: passwordAdmin,
-                id_evaluacion: id
-            });
-
-        if (error) throw error;
+        await api('/api/evaluaciones/' + encodeURIComponent(id), { method: 'DELETE' });
         return true;
     } catch (error) {
         console.error('Error al eliminar evaluación:', error);
@@ -511,79 +288,35 @@ async function eliminarEvaluacion(id) {
     }
 }
 
-// ========== AUTENTICACIÓN DE ADMINISTRADOR ==========
-
-// Función para hashear una contraseña usando SHA-256
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
-}
-
-// Validar contraseña de administrador
 async function validarPasswordAdmin(password) {
-    await waitForSupabase();
     try {
-        // Llamar a la función RPC segura
-        const { data, error } = await window.supabaseClient
-            .rpc('verificar_admin_password', { password_ingresada: password });
-
-        if (error) {
-            console.error('Error al validar contraseña por RPC:', error);
-            return false;
-        }
-
-        return data === true;
+        const data = await api('/api/admin/verificar', { method: 'POST', body: { password } });
+        return data.ok === true;
     } catch (error) {
         console.error('Error al validar contraseña:', error);
         return false;
     }
 }
 
-// Actualizar contraseña de administrador
 async function actualizarPasswordAdmin(nuevaPassword, passwordActual) {
-    await waitForSupabase();
     try {
-        // Hashear la nueva contraseña
-        const passwordHash = await hashPassword(nuevaPassword);
-
-        // Llamar a la función RPC segura para guardar el nuevo hash verificando la contraseña actual
-        const { data, error } = await window.supabaseClient
-            .rpc('actualizar_password_admin_segura', { 
-                password_actual: passwordActual, 
-                nuevo_hash: passwordHash 
-            });
-
-        if (error) throw error;
-        return data === true;
+        const data = await api('/api/admin/password', {
+            method: 'POST',
+            body: { passwordActual, nuevaPassword }
+        });
+        return data.ok === true;
     } catch (error) {
         console.error('Error al actualizar contraseña:', error);
         return false;
     }
 }
 
-
-// ========== EVALUACIONES ADMINISTRADOR ==========
-
 async function guardarEvaluacionAdmin(proveedor, item, valor) {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        const { error } = await window.supabaseClient
-            .rpc('guardar_evaluacion_admin_segura', {
-                password_admin: passwordAdmin,
-                proveedor_p: proveedor,
-                item_p: item,
-                valor_p: valor
-            });
-
-        if (error) {
-            console.error('Error detallado upsert:', error);
-            throw error;
-        }
+        await api('/api/evaluaciones-admin', {
+            method: 'PUT',
+            body: { proveedor, item, valor }
+        });
         return true;
     } catch (error) {
         console.error('Error al guardar evaluación admin:', error);
@@ -592,17 +325,11 @@ async function guardarEvaluacionAdmin(proveedor, item, valor) {
 }
 
 async function eliminarEvaluacionAdmin(proveedor, item) {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        const { error } = await window.supabaseClient
-            .rpc('eliminar_evaluacion_admin_segura', {
-                password_admin: passwordAdmin,
-                proveedor_p: proveedor,
-                item_p: item
-            });
-
-        if (error) throw error;
+        await api('/api/evaluaciones-admin', {
+            method: 'DELETE',
+            body: { proveedor, item }
+        });
         return true;
     } catch (error) {
         console.error('Error al eliminar evaluación admin:', error);
@@ -611,22 +338,10 @@ async function eliminarEvaluacionAdmin(proveedor, item) {
 }
 
 async function cargarEvaluacionesAdmin(proveedor) {
-    await waitForSupabase();
     try {
-        const passwordAdmin = sessionStorage.getItem('adminPassword') || '';
-        const { data, error } = await window.supabaseClient
-            .rpc('cargar_evaluaciones_admin_segura', {
-                password_admin: passwordAdmin,
-                proveedor_p: proveedor
-            });
-
-        if (error) throw error;
-
-        // Convertir a objeto { item: valor }
+        const data = await api('/api/evaluaciones-admin?proveedor=' + encodeURIComponent(proveedor));
         const evaluaciones = {};
-        data.forEach(d => {
-            evaluaciones[d.item] = d.valor;
-        });
+        (data || []).forEach(d => { evaluaciones[d.item] = d.valor; });
         return evaluaciones;
     } catch (error) {
         console.error('Error al cargar evaluaciones admin:', error);
@@ -634,9 +349,11 @@ async function cargarEvaluacionesAdmin(proveedor) {
     }
 }
 
-// Make globally available
 if (typeof window !== 'undefined') {
     window.guardarEvaluacionAdmin = guardarEvaluacionAdmin;
     window.cargarEvaluacionesAdmin = cargarEvaluacionesAdmin;
+    window.eliminarProveedor = eliminarProveedor;
+    window.eliminarEvaluador = eliminarEvaluador;
+    window.validarPasswordAdmin = validarPasswordAdmin;
+    window.guardarEvaluacionEnSupabase = guardarEvaluacionEnSupabase;
 }
-

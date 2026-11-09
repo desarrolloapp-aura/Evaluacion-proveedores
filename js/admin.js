@@ -6,6 +6,9 @@ console.warn = function() {};
 console.debug = function() {};
 
 
+let listaEvaluadoresAdmin = [];
+let evaluadorAsignacionActivo = '';
+
 // Función helper para detectar si es móvil
 function esMovil() {
     return window.innerWidth <= 900;
@@ -74,7 +77,7 @@ let configuracion = configuracionDefault;
     if (!esValida) {
         console.error('❌ Acceso no autorizado detectado. Redirigiendo...');
         sessionStorage.clear();
-        window.location.href = 'login-admin.html';
+        window.location.replace('/admin');
         return;
     }
 
@@ -656,12 +659,11 @@ async function inicializarFormulario() {
         }, 200);
     }
 
-    // Inicializar evaluadores, proveedores y asignaciones en paralelo para mayor velocidad
     await Promise.all([
         inicializarEvaluadores(),
-        inicializarProveedores(),
-        inicializarAsignaciones()
+        inicializarProveedores()
     ]);
+    await inicializarAsignaciones();
 }
 
 function crearEditorItem(item, index, tipo) {
@@ -1003,33 +1005,64 @@ async function inicializarEvaluadores() {
 
     console.log('📋 Evaluadores finales a mostrar:', evaluadores.length);
 
-    if (evaluadores.length === 0) {
-        container.innerHTML = '<p class="empty-message">No hay evaluadores registrados. Agrega uno para comenzar.</p>';
+    listaEvaluadoresAdmin = evaluadores;
+    renderTablaEvaluadores(evaluadores);
+}
+
+function renderTablaEvaluadores(evaluadores) {
+    const container = document.getElementById('evaluadoresList');
+    const conteo = document.getElementById('conteoEvaluadores');
+    if (!container) return;
+
+    const texto = (document.getElementById('buscarEvaluador')?.value || '').trim().toLowerCase();
+    const visibles = evaluadores.filter(nombre => nombre.toLowerCase().includes(texto));
+    if (conteo) {
+        conteo.textContent = visibles.length === 1 ? '1 persona' : `${visibles.length} personas`;
+    }
+
+    container.innerHTML = '';
+    if (visibles.length === 0) {
+        container.innerHTML = evaluadores.length === 0
+            ? '<p class="empty-message">No hay evaluadores registrados.</p>'
+            : '<p class="empty-message">No hay evaluadores que coincidan con la búsqueda.</p>';
         return;
     }
 
-    console.log('🎨 Renderizando evaluadores en la interfaz...');
-    evaluadores.forEach(evaluador => {
-        const card = document.createElement('div');
-        card.className = 'evaluador-card';
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>#</th><th>Nombre</th><th></th></tr>';
+    table.appendChild(thead);
 
-        const nombre = document.createElement('div');
-        nombre.className = 'evaluador-nombre';
+    const tbody = document.createElement('tbody');
+    visibles.forEach((evaluador, index) => {
+        const tr = document.createElement('tr');
+
+        const numero = document.createElement('td');
+        numero.className = 'col-num';
+        numero.textContent = String(index + 1);
+
+        const nombre = document.createElement('td');
         nombre.textContent = evaluador;
 
+        const acciones = document.createElement('td');
+        acciones.className = 'col-actions';
         const btnEliminar = document.createElement('button');
         btnEliminar.type = 'button';
-        btnEliminar.className = 'btn-remove-small';
-        btnEliminar.textContent = '🗑️';
-        btnEliminar.title = 'Eliminar evaluador';
+        btnEliminar.className = 'btn-row btn-row-danger';
+        btnEliminar.textContent = 'Eliminar';
         btnEliminar.onclick = function () {
             eliminarEvaluadorLocal(evaluador);
         };
+        acciones.appendChild(btnEliminar);
 
-        card.appendChild(nombre);
-        card.appendChild(btnEliminar);
-        container.appendChild(card);
+        tr.appendChild(numero);
+        tr.appendChild(nombre);
+        tr.appendChild(acciones);
+        tbody.appendChild(tr);
     });
+    table.appendChild(tbody);
+    container.appendChild(table);
 }
 
 // Eliminar evaluador
@@ -1140,202 +1173,156 @@ async function inicializarProveedores() {
         console.log('⚠️ Proveedores construidos desde asignaciones (fallback):', Object.keys(configuracion.proveedores).length);
     }
 
-    // Mostrar lista de proveedores
+    renderTablaProveedores();
+}
+
+function datosProveedor(nombre) {
+    const data = (configuracion.proveedores || {})[nombre];
+    const tipo = typeof data === 'object' ? data.tipo : data;
+    const email = typeof data === 'object' ? (data.email || '') : '';
+    return { tipo, email };
+}
+
+function renderTablaProveedores() {
     const container = document.getElementById('proveedoresList');
-    if (container) {
-        container.innerHTML = '';
-        const proveedores = Object.keys(configuracion.proveedores).sort();
+    const conteo = document.getElementById('conteoProveedores');
+    if (!container) return;
 
-        if (proveedores.length === 0) {
-            container.innerHTML = '<p class="empty-message">No hay proveedores registrados. Agrega uno para comenzar.</p>';
-            return;
-        }
+    const texto = (document.getElementById('buscarProveedor')?.value || '').trim().toLowerCase();
+    const tipoFiltro = document.getElementById('filtroTipoProveedor')?.value || 'TODOS';
+    const nombres = Object.keys(configuracion.proveedores || {}).sort((a, b) => a.localeCompare(b, 'es'));
+    const visibles = nombres.filter(nombre => {
+        const { tipo, email } = datosProveedor(nombre);
+        const coincideTexto = nombre.toLowerCase().includes(texto) || (email || '').toLowerCase().includes(texto);
+        const coincideTipo = tipoFiltro === 'TODOS' || tipo === tipoFiltro;
+        return coincideTexto && coincideTipo;
+    });
 
-        if (Object.keys(configuracion.proveedores).length > 0) {
-            console.log('DEBUG: v15 LOADED - ALERTING USER');
-            // alert('VERSION 15 CARGADA - SI VES ESTO, EL CODIGO NUEVO ESTA CORRIENDO'); 
-            // Commented out alert to be less annoying, but logging is key. 
-            // Actually, user is desperate. Let's use console and the visual change (Pink card).
-        }
-
-        proveedores.forEach(proveedor => {
-            const data = configuracion.proveedores[proveedor];
-            const tipo = typeof data === 'object' ? data.tipo : data;
-            const email = typeof data === 'object' ? (data.email || 'Sin correo') : 'Sin correo';
-
-            const card = document.createElement('div');
-            card.className = 'proveedor-card';
-            card.style.borderLeft = tipo === 'PRODUCTO' ? '4px solid #4A90E2' : '4px solid #50C878';
-            card.style.display = 'flex';
-            card.style.flexDirection = 'row';
-            card.style.justifyContent = 'space-between';
-            card.style.alignItems = 'flex-start';
-            card.style.padding = '12px 16px';
-            card.style.minHeight = 'auto';
-            card.style.position = 'relative';
-
-            const info = document.createElement('div');
-            info.style.flex = '1'; // Ensure info takes available widths
-            info.style.minWidth = '0';
-            info.style.marginRight = '10px';
-            info.style.display = 'flex';
-            info.style.flexDirection = 'column';
-            info.style.justifyContent = 'center';
-            // --- HEADER: NAME ONLY (Guaranteed Visibility) ---
-            // Removed Icon from here to avoid layout conflicts.
-            const nameEl = document.createElement('div');
-
-            // Name Logic
-            let displayName = proveedor;
-            if (typeof displayName !== 'string' || !displayName) {
-                displayName = String(displayName);
-            }
-            if (!displayName || displayName.trim() === '') {
-                displayName = '(NOMBRE VACIO)';
-            }
-
-            nameEl.textContent = displayName;
-            nameEl.title = displayName;
-            nameEl.style.cssText = `
-                display: block;
-                width: calc(100% - 30px); /* Leave room for icons */
-                margin-bottom: 5px;
-                border-bottom: 1px solid #eee;
-                padding-bottom: 5px;
-                color: #000;
-                font-weight: bold;
-                font-size: 1.1rem;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                text-align: left;
-            `;
-            // Append Name Directly
-            info.appendChild(nameEl);
-
-            // --- TIPO ---
-            const tipoEl = document.createElement('div');
-            tipoEl.textContent = tipo;
-            tipoEl.style.color = tipo === 'PRODUCTO' ? '#1976d2' : '#388e3c';
-            tipoEl.style.fontWeight = 'bold';
-            tipoEl.style.fontSize = '0.9rem';
-            tipoEl.style.marginBottom = '5px';
-            tipoEl.style.textAlign = 'left';
-            info.appendChild(tipoEl);
-
-            // --- EMAIL ROW ---
-            const emailRow = document.createElement('div');
-            emailRow.style.display = 'flex';
-            emailRow.style.alignItems = 'center';
-            emailRow.style.justifyContent = 'flex-start'; // Changed from space-between to start
-            emailRow.style.width = '100%';
-            emailRow.style.gap = '5px'; // Gap between text and pencil
-
-            const emailText = document.createElement('span');
-            emailText.textContent = email || 'Sin correo';
-            emailText.style.color = '#666';
-            emailText.style.fontSize = '0.9rem';
-            emailText.style.overflow = 'hidden';
-            emailText.style.textOverflow = 'ellipsis';
-            emailText.style.whiteSpace = 'nowrap';
-            emailText.style.textAlign = 'left';
-
-            const editBtn = document.createElement('button');
-            editBtn.innerHTML = '✏️';
-            editBtn.title = 'Editar correo';
-            editBtn.style.background = 'transparent';
-            editBtn.style.border = 'none';
-            editBtn.style.cursor = 'pointer';
-            editBtn.style.fontSize = '1rem';
-            editBtn.style.padding = '0';
-            editBtn.style.margin = '0'; // Reset margins
-            editBtn.onclick = async (e) => {
-                e.stopPropagation();
-                // Logic to edit email (active)
-                const currentEmail = email === 'Sin correo' ? '' : email;
-                const newEmail = prompt('Editar correo para ' + displayName + ':', currentEmail);
-
-                if (newEmail !== null && newEmail.trim() !== currentEmail) {
-                    const finalEmail = newEmail.trim() || 'Sin correo';
-                    try {
-                        // Update in Supabase
-                        const success = await actualizarEmailProveedor(proveedor, finalEmail);
-
-                        if (success) {
-                            // Update local state and UI
-                            if (typeof configuracion.proveedores[proveedor] === 'string') {
-                                configuracion.proveedores[proveedor] = {
-                                    tipo: configuracion.proveedores[proveedor],
-                                    email: finalEmail
-                                };
-                            } else {
-                                configuracion.proveedores[proveedor].email = finalEmail;
-                            }
-
-                            inicializarProveedores();
-                            alert('✅ Correo actualizado correctamente');
-                        }
-                    } catch (error) {
-                        console.error('Error updating email:', error);
-                        alert('❌ Error al actualizar el correo');
-                    }
-                }
-            };
-
-            emailRow.appendChild(emailText);
-            emailRow.appendChild(editBtn);
-            info.appendChild(emailRow);
-
-            card.appendChild(info);
-
-            // --- ACTIONS (Absolute Top-Right) ---
-            const actionsDiv = document.createElement('div');
-            actionsDiv.style.position = 'absolute';
-            actionsDiv.style.top = '5px';
-            actionsDiv.style.right = '5px';
-            actionsDiv.style.display = 'flex';
-            actionsDiv.style.flexDirection = 'column'; // STACKED VERTICALLY
-            actionsDiv.style.gap = '25px'; // Increased gap to push notebook button down
-            actionsDiv.style.zIndex = '10';
-
-            // 1. Trash Button (Top)
-            const trashBtn = document.createElement('button');
-            trashBtn.innerHTML = '🗑️';
-            trashBtn.title = 'Eliminar proveedor';
-            trashBtn.style.background = 'transparent';
-            trashBtn.style.border = 'none';
-            trashBtn.style.cursor = 'pointer';
-            trashBtn.style.fontSize = '1.3rem';
-            trashBtn.style.padding = '0';
-            trashBtn.style.margin = '0';
-            trashBtn.style.lineHeight = '1';
-            trashBtn.onclick = (e) => {
-                e.stopPropagation();
-                eliminarProveedorLocal(proveedor);
-            };
-            actionsDiv.appendChild(trashBtn);
-
-            // 2. Notebook Button (Bottom - Pushed down by gap)
-            const notebookBtn = document.createElement('button');
-            notebookBtn.innerHTML = '📋';
-            notebookBtn.title = 'Asignar evaluadores';
-            notebookBtn.style.background = 'transparent';
-            notebookBtn.style.border = 'none';
-            notebookBtn.style.cursor = 'pointer';
-            notebookBtn.style.fontSize = '1.3rem';
-            notebookBtn.style.padding = '0';
-            notebookBtn.style.margin = '0';
-            notebookBtn.style.lineHeight = '1';
-            notebookBtn.onclick = (e) => {
-                e.stopPropagation();
-                abrirEvaluacionAdmin(proveedor, tipo);
-            };
-            actionsDiv.appendChild(notebookBtn);
-
-            card.appendChild(actionsDiv);
-            container.appendChild(card);
-        });
+    if (conteo) {
+        conteo.textContent = visibles.length === 1 ? '1 proveedor' : `${visibles.length} proveedores`;
     }
+
+    container.innerHTML = '';
+    if (visibles.length === 0) {
+        container.innerHTML = nombres.length === 0
+            ? '<p class="empty-message">No hay proveedores registrados.</p>'
+            : '<p class="empty-message">No hay proveedores que coincidan con la búsqueda.</p>';
+        return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>#</th><th>Nombre</th><th>Tipo</th><th>Correo</th><th></th></tr>';
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    visibles.forEach((proveedor, index) => {
+        const { tipo, email } = datosProveedor(proveedor);
+        const tr = document.createElement('tr');
+
+        const numero = document.createElement('td');
+        numero.className = 'col-num';
+        numero.textContent = String(index + 1);
+
+        const nombre = document.createElement('td');
+        nombre.className = 'col-name';
+        nombre.textContent = proveedor;
+
+        const tipoCelda = document.createElement('td');
+        const pill = document.createElement('span');
+        pill.className = 'pill ' + (tipo === 'SERVICIO' ? 'pill-servicio' : 'pill-producto');
+        pill.textContent = tipo === 'SERVICIO' ? 'Servicio' : 'Producto';
+        tipoCelda.appendChild(pill);
+
+        const correo = document.createElement('td');
+        const correoTexto = document.createElement('span');
+        const correoVisible = email && email !== 'Sin correo' ? email : '';
+        correoTexto.textContent = correoVisible || '—';
+        correoTexto.className = correoVisible ? '' : 'muted';
+        correo.appendChild(correoTexto);
+
+        const acciones = document.createElement('td');
+        acciones.className = 'col-actions';
+
+        const btnCorreo = document.createElement('button');
+        btnCorreo.type = 'button';
+        btnCorreo.className = 'btn-row';
+        btnCorreo.textContent = 'Correo';
+        btnCorreo.onclick = () => editarCorreoEnFila(correo, proveedor, correoVisible);
+
+        const btnEvaluar = document.createElement('button');
+        btnEvaluar.type = 'button';
+        btnEvaluar.className = 'btn-row';
+        btnEvaluar.textContent = 'Evaluar';
+        btnEvaluar.onclick = () => abrirEvaluacionAdmin(proveedor, tipo);
+
+        const btnEliminar = document.createElement('button');
+        btnEliminar.type = 'button';
+        btnEliminar.className = 'btn-row btn-row-danger';
+        btnEliminar.textContent = 'Eliminar';
+        btnEliminar.onclick = () => eliminarProveedorLocal(proveedor);
+
+        acciones.appendChild(btnCorreo);
+        acciones.appendChild(btnEvaluar);
+        acciones.appendChild(btnEliminar);
+
+        tr.appendChild(numero);
+        tr.appendChild(nombre);
+        tr.appendChild(tipoCelda);
+        tr.appendChild(correo);
+        tr.appendChild(acciones);
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
+}
+
+function editarCorreoEnFila(celda, proveedor, correoActual) {
+    celda.innerHTML = '';
+    const input = document.createElement('input');
+    input.type = 'email';
+    input.className = 'inline-email';
+    input.value = correoActual;
+    input.placeholder = 'correo@empresa.cl';
+
+    const guardar = document.createElement('button');
+    guardar.type = 'button';
+    guardar.className = 'btn-row';
+    guardar.textContent = 'Guardar';
+
+    const cancelar = document.createElement('button');
+    cancelar.type = 'button';
+    cancelar.className = 'btn-row';
+    cancelar.textContent = 'Cancelar';
+    cancelar.onclick = () => renderTablaProveedores();
+
+    guardar.onclick = async () => {
+        const finalEmail = input.value.trim() || 'Sin correo';
+        try {
+            await actualizarEmailProveedor(proveedor, finalEmail);
+            if (typeof configuracion.proveedores[proveedor] === 'string') {
+                configuracion.proveedores[proveedor] = {
+                    tipo: configuracion.proveedores[proveedor],
+                    email: finalEmail
+                };
+            } else {
+                configuracion.proveedores[proveedor].email = finalEmail;
+            }
+            renderTablaProveedores();
+        } catch (error) {
+            console.error('Error al actualizar el correo:', error);
+            alert('No se pudo actualizar el correo.');
+        }
+    };
+
+    const fila = document.createElement('div');
+    fila.className = 'inline-email-row';
+    fila.appendChild(input);
+    fila.appendChild(guardar);
+    fila.appendChild(cancelar);
+    celda.appendChild(fila);
+    input.focus();
 }
 
 // Eliminar proveedor
@@ -1468,88 +1455,245 @@ async function inicializarAsignaciones() {
         console.log('⚠️ No hay asignaciones, usando configuración por defecto:', Object.keys(asignacion).length);
     }
 
-    console.log('📋 Asignaciones finales a mostrar:', Object.keys(asignacion).length, 'evaluadores');
+    const nombresEvaluadores = await cargarEvaluadores();
+    nombresEvaluadores.forEach(nombre => {
+        if (!asignacion[nombre]) asignacion[nombre] = { PRODUCTO: [], SERVICIO: [] };
+    });
+    configuracion.asignacionProveedores = asignacion;
+    renderAsignaciones();
+}
 
-    const evaluadores = Object.keys(asignacion).sort();
+function renderAsignaciones() {
+    const container = document.getElementById('asignacionesContainer');
+    if (!container) return;
+
+    const asignacion = configuracion.asignacionProveedores || {};
     const proveedores = configuracion.proveedores || {};
+    const evaluadores = Object.keys(asignacion).sort((a, b) => a.localeCompare(b, 'es'));
 
+    container.innerHTML = '';
     if (evaluadores.length === 0) {
         container.innerHTML = '<p class="empty-message">No hay evaluadores. Agrega evaluadores primero.</p>';
         return;
     }
 
+    if (!evaluadorAsignacionActivo || !asignacion[evaluadorAsignacionActivo]) {
+        evaluadorAsignacionActivo = evaluadores[0];
+    }
+
+    const layout = document.createElement('div');
+    layout.className = 'asig-layout';
+
+    const side = document.createElement('aside');
+    side.className = 'asig-side';
+
+    const encabezado = document.createElement('div');
+    encabezado.className = 'asig-card-title';
+    encabezado.innerHTML = '<span class="asig-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><strong>Evaluadores</strong>';
+    const totalPersonas = document.createElement('span');
+    totalPersonas.className = 'asig-total';
+    totalPersonas.textContent = String(evaluadores.length);
+    encabezado.appendChild(totalPersonas);
+
+    const buscador = document.createElement('input');
+    buscador.type = 'search';
+    buscador.placeholder = 'Buscar evaluador...';
+    buscador.id = 'buscarEvaluadorAsignacion';
+    const lista = document.createElement('div');
+    lista.className = 'asig-people';
+
     evaluadores.forEach(evaluador => {
-        const card = document.createElement('div');
-        card.className = 'asignacion-card';
+        const boton = document.createElement('button');
+        boton.type = 'button';
+        boton.className = 'asig-person' + (evaluador === evaluadorAsignacionActivo ? ' active' : '');
+        boton.dataset.nombre = evaluador;
 
-        const header = document.createElement('div');
-        header.className = 'asignacion-header';
+        const avatar = document.createElement('span');
+        avatar.className = 'asig-avatar';
+        avatar.textContent = iniciales(evaluador);
 
-        const titulo = document.createElement('h3');
-        titulo.textContent = evaluador;
-        titulo.className = 'asignacion-titulo';
+        const nombre = document.createElement('span');
+        nombre.className = 'asig-name';
+        nombre.textContent = presentarNombre(evaluador);
 
-        header.appendChild(titulo);
+        const total = (asignacion[evaluador].PRODUCTO || []).length + (asignacion[evaluador].SERVICIO || []).length;
+        const badge = document.createElement('span');
+        badge.className = 'asig-badge';
+        badge.textContent = String(total);
 
-        const content = document.createElement('div');
-        content.className = 'asignacion-content';
-
-        ['PRODUCTO', 'SERVICIO'].forEach(tipo => {
-            const tipoSection = document.createElement('div');
-            tipoSection.className = 'tipo-section';
-            tipoSection.style.borderLeftColor = tipo === 'PRODUCTO' ? '#4A90E2' : '#50C878';
-
-            const tipoHeader = document.createElement('div');
-            tipoHeader.className = 'tipo-header';
-
-            const tipoLabel = document.createElement('label');
-            tipoLabel.textContent = tipo === 'PRODUCTO' ? '🟦 PRODUCTO' : '🟩 SERVICIO';
-            tipoLabel.className = 'tipo-label';
-            tipoLabel.style.color = tipo === 'PRODUCTO' ? '#4A90E2' : '#50C878';
-
-            tipoHeader.appendChild(tipoLabel);
-
-            const select = document.createElement('select');
-            select.multiple = true;
-            select.className = 'asignacion-select';
-            select.id = `asignacion_${evaluador}_${tipo}`;
-            select.dataset.evaluador = evaluador;
-            select.dataset.tipo = tipo;
-            select.title = 'Mantén presionado Ctrl (Cmd en Mac) para seleccionar múltiples proveedores';
-
-            // Agregar proveedores del tipo correspondiente
-            const proveedoresTipo = Object.keys(proveedores).filter(p => {
-                const data = proveedores[p];
-                const pTipo = typeof data === 'object' ? data.tipo : data;
-                return pTipo === tipo;
-            }).sort();
-
-            if (proveedoresTipo.length === 0) {
-                const option = document.createElement('option');
-                option.disabled = true;
-                option.textContent = `No hay proveedores de tipo ${tipo}`;
-                select.appendChild(option);
-            } else {
-                proveedoresTipo.forEach(proveedor => {
-                    const option = document.createElement('option');
-                    option.value = proveedor;
-                    option.textContent = proveedor;
-                    if (asignacion[evaluador] && asignacion[evaluador][tipo] && asignacion[evaluador][tipo].includes(proveedor)) {
-                        option.selected = true;
-                    }
-                    select.appendChild(option);
-                });
+        boton.appendChild(avatar);
+        boton.appendChild(nombre);
+        boton.appendChild(badge);
+        boton.onclick = () => {
+            evaluadorAsignacionActivo = evaluador;
+            const textoBusqueda = document.getElementById('buscarEvaluadorAsignacion')?.value || '';
+            renderAsignaciones();
+            const campo = document.getElementById('buscarEvaluadorAsignacion');
+            if (campo && textoBusqueda) {
+                campo.value = textoBusqueda;
+                campo.dispatchEvent(new Event('input'));
             }
-
-            tipoSection.appendChild(tipoHeader);
-            tipoSection.appendChild(select);
-            content.appendChild(tipoSection);
-        });
-
-        card.appendChild(header);
-        card.appendChild(content);
-        container.appendChild(card);
+        };
+        lista.appendChild(boton);
     });
+
+    buscador.addEventListener('input', () => {
+        const texto = buscador.value.trim().toLowerCase();
+        lista.querySelectorAll('.asig-person').forEach(boton => {
+            boton.hidden = texto && !boton.dataset.nombre.toLowerCase().includes(texto);
+        });
+    });
+
+    side.appendChild(encabezado);
+    side.appendChild(buscador);
+    side.appendChild(lista);
+
+    const main = document.createElement('section');
+    main.className = 'asig-main';
+    main.appendChild(crearPanelAsignacion(evaluadorAsignacionActivo, proveedores, asignacion));
+
+    layout.appendChild(side);
+    layout.appendChild(main);
+    container.appendChild(layout);
+}
+
+function iniciales(nombre) {
+    const partes = presentarNombre(nombre).split(/\s+/).filter(Boolean);
+    if (!partes.length) return '';
+    if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+    return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
+function presentarNombre(nombre) {
+    return String(nombre).toLocaleLowerCase('es-CL').replace(/(^|[\s./-])(\p{L})/gu, (_, separador, letra) => {
+        return separador + letra.toLocaleUpperCase('es-CL');
+    });
+}
+
+let tipoAsignacionActivo = 'PRODUCTO';
+
+function crearPanelAsignacion(evaluador, proveedores, asignacion) {
+    const panel = document.createElement('div');
+    panel.className = 'asig-panel';
+
+    if (!asignacion[evaluador]) asignacion[evaluador] = { PRODUCTO: [], SERVICIO: [] };
+    ['PRODUCTO', 'SERVICIO'].forEach(tipo => {
+        if (!Array.isArray(asignacion[evaluador][tipo])) asignacion[evaluador][tipo] = [];
+    });
+
+    const cabeza = document.createElement('div');
+    cabeza.className = 'asig-main-head';
+    cabeza.innerHTML = '<span class="asig-title-icon asig-title-icon-dark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg></span><div><h3>Asignar Períodos</h3><p>Selecciona los períodos y proveedores para asignar a los evaluadores.</p></div>';
+
+    const pestanas = document.createElement('div');
+    pestanas.className = 'asig-tabs';
+    const buscador = document.createElement('input');
+    buscador.type = 'search';
+    buscador.className = 'asig-search';
+    buscador.placeholder = 'Buscar proveedor...';
+    const lista = document.createElement('div');
+    lista.className = 'asig-checks';
+    const trabajo = document.createElement('div');
+    trabajo.className = 'asig-work';
+
+    const actualizarBadge = () => {
+        const badge = document.querySelector('.asig-person.active .asig-badge');
+        if (!badge) return;
+        const total = (asignacion[evaluador].PRODUCTO || []).length + (asignacion[evaluador].SERVICIO || []).length;
+        badge.textContent = String(total);
+    };
+
+    const pintarPestanas = () => {
+        pestanas.innerHTML = '';
+        ['PRODUCTO', 'SERVICIO'].forEach(tipo => {
+            const boton = document.createElement('button');
+            boton.type = 'button';
+            boton.className = 'asig-tab' + (tipo === tipoAsignacionActivo ? ' active' : '');
+            const cantidad = asignacion[evaluador][tipo].length;
+            const icono = document.createElement('span');
+            icono.className = 'asig-tab-icon';
+            icono.innerHTML = tipo === 'PRODUCTO'
+                ? '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.2-.5-.5-2.2 2.1-2.1z"/></svg>';
+            const etiqueta = document.createElement('span');
+            etiqueta.textContent = (tipo === 'PRODUCTO' ? 'Producto' : 'Servicio') + ' · ' + cantidad;
+            boton.appendChild(icono);
+            boton.appendChild(etiqueta);
+            boton.onclick = () => {
+                tipoAsignacionActivo = tipo;
+                buscador.value = '';
+                pintarPestanas();
+                pintarLista();
+            };
+            pestanas.appendChild(boton);
+        });
+    };
+
+    const pintarLista = () => {
+        const tipo = tipoAsignacionActivo;
+        const texto = buscador.value.trim().toLowerCase();
+        const nombres = Object.keys(proveedores)
+            .filter(nombre => datosProveedor(nombre).tipo === tipo)
+            .filter(nombre => !texto || nombre.toLowerCase().includes(texto) || presentarNombre(nombre).toLowerCase().includes(texto))
+            .sort((a, b) => {
+                const aMarcado = asignacion[evaluador][tipo].includes(a) ? 0 : 1;
+                const bMarcado = asignacion[evaluador][tipo].includes(b) ? 0 : 1;
+                if (aMarcado !== bMarcado) return aMarcado - bMarcado;
+                return a.localeCompare(b, 'es');
+            });
+
+        lista.innerHTML = '';
+        if (nombres.length === 0) {
+            const vacio = document.createElement('p');
+            vacio.className = 'asig-empty';
+            vacio.textContent = texto ? 'No hay proveedores con ese nombre.' : 'No hay proveedores de este tipo.';
+            lista.appendChild(vacio);
+            return;
+        }
+
+        nombres.forEach(nombre => {
+            const fila = document.createElement('label');
+            fila.className = 'asig-check';
+            const casilla = document.createElement('input');
+            casilla.type = 'checkbox';
+            casilla.checked = asignacion[evaluador][tipo].includes(nombre);
+            casilla.addEventListener('change', () => {
+                const indice = asignacion[evaluador][tipo].indexOf(nombre);
+                if (casilla.checked && indice === -1) asignacion[evaluador][tipo].push(nombre);
+                if (!casilla.checked && indice > -1) asignacion[evaluador][tipo].splice(indice, 1);
+                configuracion.asignacionProveedores = asignacion;
+                fila.classList.toggle('is-on', casilla.checked);
+                pintarPestanas();
+                actualizarBadge();
+            });
+            const textoNombre = document.createElement('span');
+            textoNombre.textContent = presentarNombre(nombre);
+            textoNombre.title = presentarNombre(nombre);
+            fila.appendChild(casilla);
+            fila.appendChild(textoNombre);
+            lista.appendChild(fila);
+        });
+    };
+
+    buscador.addEventListener('input', pintarLista);
+    pintarPestanas();
+    pintarLista();
+    actualizarBadge();
+
+    trabajo.appendChild(lista);
+    trabajo.appendChild(crearIlustracionAsignacion());
+    panel.appendChild(cabeza);
+    panel.appendChild(pestanas);
+    panel.appendChild(buscador);
+    panel.appendChild(trabajo);
+    return panel;
+}
+
+function crearIlustracionAsignacion() {
+    const lado = document.createElement('aside');
+    lado.className = 'asig-art';
+    lado.innerHTML = '<div class="asig-art-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3h7l5 5v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M15 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg><span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span></div><h4>Configura tus asignaciones</h4><p>Selecciona los evaluadores y proveedores para asignar los periodos de evaluación.</p>';
+    return lado;
 }
 
 function inicializarEventos() {
@@ -1655,6 +1799,21 @@ function inicializarEventos() {
         console.error('Botón agregar servicio NO encontrado');
     }
 
+    const buscarEvaluador = document.getElementById('buscarEvaluador');
+    if (buscarEvaluador) {
+        buscarEvaluador.addEventListener('input', () => renderTablaEvaluadores(listaEvaluadoresAdmin));
+    }
+
+    const buscarProveedor = document.getElementById('buscarProveedor');
+    if (buscarProveedor) {
+        buscarProveedor.addEventListener('input', () => renderTablaProveedores());
+    }
+
+    const filtroTipoProveedor = document.getElementById('filtroTipoProveedor');
+    if (filtroTipoProveedor) {
+        filtroTipoProveedor.addEventListener('change', () => renderTablaProveedores());
+    }
+
     // Agregar evaluador
     const btnAgregarEvaluador = document.getElementById('agregarEvaluadorBtn');
     if (btnAgregarEvaluador) {
@@ -1738,7 +1897,7 @@ function inicializarEventos() {
                 sessionStorage.removeItem('adminAuthenticated');
                 sessionStorage.removeItem('adminPassword');
                 sessionStorage.removeItem('adminAuthTime');
-                window.location.href = 'login-admin.html';
+                window.location.replace('/admin');
             }
         };
     }
@@ -1748,12 +1907,10 @@ function inicializarEventos() {
     if (btnVolver) {
         console.log('Botón volver encontrado');
         btnVolver.onclick = function () {
-            console.log('Volviendo al formulario...');
-            // Limpiar sesión al salir del panel de administración
             sessionStorage.removeItem('adminAuthenticated');
             sessionStorage.removeItem('adminPassword');
             sessionStorage.removeItem('adminAuthTime');
-            window.location.href = 'index.html';
+            window.location.replace('index.html');
         };
     }
 
@@ -2815,16 +2972,7 @@ async function guardarAsignacionesLocal() {
             configuracion.asignacionProveedores = {};
         }
 
-        // Recopilar asignaciones
-        document.querySelectorAll('select[id^="asignacion_"]').forEach(select => {
-            const evaluador = select.dataset.evaluador;
-            const tipo = select.dataset.tipo;
-            if (!configuracion.asignacionProveedores[evaluador]) {
-                configuracion.asignacionProveedores[evaluador] = { PRODUCTO: [], SERVICIO: [] };
-            }
-            const seleccionados = Array.from(select.selectedOptions).map(opt => opt.value);
-            configuracion.asignacionProveedores[evaluador][tipo] = seleccionados;
-        });
+        // Las casillas ya actualizan configuracion.asignacionProveedores al marcarse.
 
         // Guardar
         const timeoutPromise = new Promise((_, reject) => 
