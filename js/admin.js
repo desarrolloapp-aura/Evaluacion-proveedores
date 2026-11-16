@@ -150,7 +150,8 @@ async function guardarConfiguracion() {
             anioEncuesta: configuracion.anioEncuesta,
             fechaInicioEncuesta: configuracion.fechaInicioEncuesta,
             fechaFinEncuesta: configuracion.fechaFinEncuesta,
-            zonaHorariaEncuesta: configuracion.zonaHorariaEncuesta
+            zonaHorariaEncuesta: configuracion.zonaHorariaEncuesta,
+            minutosSesion: configuracion.minutosSesion
         });
 
         if (!resultado) {
@@ -404,6 +405,10 @@ async function inicializarFormulario() {
         }
         if (zonaHorariaInput) {
             zonaHorariaInput.value = configuracion.zonaHorariaEncuesta || 'America/Santiago';
+        }
+        const minutosSesionInput = document.getElementById('minutosSesion');
+        if (minutosSesionInput) {
+            minutosSesionInput.value = configuracion.minutosSesion || 10;
         }
     }
 
@@ -975,38 +980,34 @@ window.eliminarItem = function (btn) {
 };
 
 // Inicializar lista de evaluadores
+function normalizarEvaluadorAdmin(item) {
+    if (!item) return { nombre: '', email: '' };
+    if (typeof item === 'string') return { nombre: item, email: '' };
+    return { nombre: item.nombre || '', email: item.email || '' };
+}
+
 async function inicializarEvaluadores() {
     const container = document.getElementById('evaluadoresList');
     if (!container) return;
 
     container.innerHTML = '';
 
-    // Cargar evaluadores desde Supabase (sin verificaciones innecesarias)
     let evaluadoresList = [];
     try {
-        evaluadoresList = await cargarEvaluadores();
-        console.log('✅ Evaluadores cargados:', evaluadoresList.length);
-
-        // Si no hay evaluadores, usar los de las asignaciones
+        evaluadoresList = (await cargarEvaluadores()).map(normalizarEvaluadorAdmin);
         if (evaluadoresList.length === 0 && configuracion.asignacionProveedores) {
-            evaluadoresList = Object.keys(configuracion.asignacionProveedores).sort();
+            evaluadoresList = Object.keys(configuracion.asignacionProveedores)
+                .sort()
+                .map(nombre => ({ nombre, email: '' }));
         }
     } catch (error) {
         console.error('Error al cargar evaluadores:', error);
-        // Si falla, usar los de las asignaciones
-        if (configuracion.asignacionProveedores) {
-            evaluadoresList = Object.keys(configuracion.asignacionProveedores).sort();
-        } else {
-            evaluadoresList = Object.keys(configuracionDefault.asignacionProveedores).sort();
-        }
+        const fuente = configuracion.asignacionProveedores || configuracionDefault.asignacionProveedores || {};
+        evaluadoresList = Object.keys(fuente).sort().map(nombre => ({ nombre, email: '' }));
     }
 
-    const evaluadores = evaluadoresList;
-
-    console.log('📋 Evaluadores finales a mostrar:', evaluadores.length);
-
-    listaEvaluadoresAdmin = evaluadores;
-    renderTablaEvaluadores(evaluadores);
+    listaEvaluadoresAdmin = evaluadoresList;
+    renderTablaEvaluadores(evaluadoresList);
 }
 
 function renderTablaEvaluadores(evaluadores) {
@@ -1014,15 +1015,18 @@ function renderTablaEvaluadores(evaluadores) {
     const conteo = document.getElementById('conteoEvaluadores');
     if (!container) return;
 
+    const lista = (evaluadores || []).map(normalizarEvaluadorAdmin);
     const texto = (document.getElementById('buscarEvaluador')?.value || '').trim().toLowerCase();
-    const visibles = evaluadores.filter(nombre => nombre.toLowerCase().includes(texto));
+    const visibles = lista.filter(item =>
+        item.nombre.toLowerCase().includes(texto) || (item.email || '').toLowerCase().includes(texto)
+    );
     if (conteo) {
         conteo.textContent = visibles.length === 1 ? '1 persona' : `${visibles.length} personas`;
     }
 
     container.innerHTML = '';
     if (visibles.length === 0) {
-        container.innerHTML = evaluadores.length === 0
+        container.innerHTML = lista.length === 0
             ? '<p class="empty-message">No hay evaluadores registrados.</p>'
             : '<p class="empty-message">No hay evaluadores que coincidan con la búsqueda.</p>';
         return;
@@ -1031,7 +1035,7 @@ function renderTablaEvaluadores(evaluadores) {
     const table = document.createElement('table');
     table.className = 'data-table';
     const thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th>#</th><th>Nombre</th><th></th></tr>';
+    thead.innerHTML = '<tr><th>#</th><th>Nombre</th><th>Correo de acceso</th><th></th></tr>';
     table.appendChild(thead);
 
     const tbody = document.createElement('tbody');
@@ -1043,26 +1047,101 @@ function renderTablaEvaluadores(evaluadores) {
         numero.textContent = String(index + 1);
 
         const nombre = document.createElement('td');
-        nombre.textContent = evaluador;
+        nombre.className = 'col-name';
+        nombre.textContent = evaluador.nombre;
+
+        const correo = document.createElement('td');
+        correo.className = 'col-email';
+        const correoTexto = document.createElement('span');
+        const correoVisible = evaluador.email || '';
+        correoTexto.textContent = correoVisible || 'Sin correo';
+        correoTexto.className = correoVisible ? '' : 'muted email-missing';
+        correo.appendChild(correoTexto);
 
         const acciones = document.createElement('td');
         acciones.className = 'col-actions';
+
+        const btnEditar = document.createElement('button');
+        btnEditar.type = 'button';
+        btnEditar.className = 'btn-icon-row';
+        btnEditar.title = 'Editar correo de acceso';
+        btnEditar.setAttribute('aria-label', `Editar correo de ${evaluador.nombre}`);
+        btnEditar.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+        btnEditar.onclick = () => editarCorreoEvaluadorEnFila(correo, evaluador.nombre, correoVisible);
+
         const btnEliminar = document.createElement('button');
         btnEliminar.type = 'button';
         btnEliminar.className = 'btn-row btn-row-danger';
         btnEliminar.textContent = 'Eliminar';
         btnEliminar.onclick = function () {
-            eliminarEvaluadorLocal(evaluador);
+            eliminarEvaluadorLocal(evaluador.nombre);
         };
+
+        acciones.appendChild(btnEditar);
         acciones.appendChild(btnEliminar);
 
         tr.appendChild(numero);
         tr.appendChild(nombre);
+        tr.appendChild(correo);
         tr.appendChild(acciones);
         tbody.appendChild(tr);
     });
     table.appendChild(tbody);
     container.appendChild(table);
+}
+
+function editarCorreoEvaluadorEnFila(celda, nombre, correoActual) {
+    celda.innerHTML = '';
+    const input = document.createElement('input');
+    input.type = 'email';
+    input.className = 'inline-email';
+    input.value = correoActual;
+    input.placeholder = 'correo@empresa.cl';
+
+    const guardar = document.createElement('button');
+    guardar.type = 'button';
+    guardar.className = 'btn-row';
+    guardar.textContent = 'Guardar';
+
+    const cancelar = document.createElement('button');
+    cancelar.type = 'button';
+    cancelar.className = 'btn-row';
+    cancelar.textContent = 'Cancelar';
+    cancelar.onclick = () => renderTablaEvaluadores(listaEvaluadoresAdmin);
+
+    guardar.onclick = async () => {
+        const finalEmail = input.value.trim();
+        try {
+            await actualizarEmailEvaluador(nombre, finalEmail);
+            listaEvaluadoresAdmin = listaEvaluadoresAdmin.map(item => {
+                const ev = normalizarEvaluadorAdmin(item);
+                return ev.nombre === nombre ? { nombre, email: finalEmail } : ev;
+            });
+            renderTablaEvaluadores(listaEvaluadoresAdmin);
+        } catch (error) {
+            console.error('Error al actualizar el correo:', error);
+            alert(error.message || 'No se pudo actualizar el correo.');
+        }
+    };
+
+    const fila = document.createElement('div');
+    fila.className = 'inline-email-row';
+    fila.appendChild(input);
+    fila.appendChild(guardar);
+    fila.appendChild(cancelar);
+    celda.appendChild(fila);
+    input.focus();
+}
+
+function setFormNuevoEvaluadorVisible(visible) {
+    const form = document.getElementById('formNuevoEvaluador');
+    const toggle = document.getElementById('mostrarFormEvaluadorBtn');
+    if (!form) return;
+    form.hidden = !visible;
+    if (toggle) toggle.classList.toggle('is-open', !!visible);
+    if (visible) {
+        document.getElementById('nuevoEvaluador')?.focus();
+    }
 }
 
 // Eliminar evaluador
@@ -1301,16 +1380,16 @@ function editarCorreoEnFila(celda, proveedor, correoActual) {
         const finalEmail = input.value.trim() || 'Sin correo';
         try {
             await actualizarEmailProveedor(proveedor, finalEmail);
-            if (typeof configuracion.proveedores[proveedor] === 'string') {
-                configuracion.proveedores[proveedor] = {
-                    tipo: configuracion.proveedores[proveedor],
-                    email: finalEmail
-                };
-            } else {
-                configuracion.proveedores[proveedor].email = finalEmail;
-            }
+                            if (typeof configuracion.proveedores[proveedor] === 'string') {
+                                configuracion.proveedores[proveedor] = {
+                                    tipo: configuracion.proveedores[proveedor],
+                                    email: finalEmail
+                                };
+                            } else {
+                                configuracion.proveedores[proveedor].email = finalEmail;
+                            }
             renderTablaProveedores();
-        } catch (error) {
+                    } catch (error) {
             console.error('Error al actualizar el correo:', error);
             alert('No se pudo actualizar el correo.');
         }
@@ -1455,7 +1534,7 @@ async function inicializarAsignaciones() {
         console.log('⚠️ No hay asignaciones, usando configuración por defecto:', Object.keys(asignacion).length);
     }
 
-    const nombresEvaluadores = await cargarEvaluadores();
+    const nombresEvaluadores = (await cargarEvaluadores()).map(item => normalizarEvaluadorAdmin(item).nombre);
     nombresEvaluadores.forEach(nombre => {
         if (!asignacion[nombre]) asignacion[nombre] = { PRODUCTO: [], SERVICIO: [] };
     });
@@ -1814,14 +1893,39 @@ function inicializarEventos() {
         filtroTipoProveedor.addEventListener('change', () => renderTablaProveedores());
     }
 
+    const btnMostrarFormEvaluador = document.getElementById('mostrarFormEvaluadorBtn');
+    if (btnMostrarFormEvaluador) {
+        btnMostrarFormEvaluador.onclick = function () {
+            const form = document.getElementById('formNuevoEvaluador');
+            setFormNuevoEvaluadorVisible(!!form?.hidden);
+        };
+    }
+    const btnCerrarFormEvaluador = document.getElementById('cerrarFormEvaluadorBtn');
+    if (btnCerrarFormEvaluador) {
+        btnCerrarFormEvaluador.onclick = function () {
+            setFormNuevoEvaluadorVisible(false);
+        };
+    }
+
     // Agregar evaluador
     const btnAgregarEvaluador = document.getElementById('agregarEvaluadorBtn');
     if (btnAgregarEvaluador) {
         btnAgregarEvaluador.onclick = async function () {
             const nombre = document.getElementById('nuevoEvaluador').value.trim();
+            const email = (document.getElementById('emailNuevoEvaluador')?.value || '').trim();
 
             if (!nombre) {
                 alert('Por favor, ingrese un nombre para el evaluador.');
+                return;
+            }
+
+            if (!email) {
+                alert('Ingrese el correo de acceso (Google) del evaluador.');
+                return;
+            }
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                alert('Ingrese un correo válido.');
                 return;
             }
 
@@ -1834,16 +1938,19 @@ function inicializarEventos() {
                 return;
             }
 
-            // Crear evaluador en Supabase
             try {
-                await crearEvaluador(nombre);
+                await crearEvaluador(nombre, email);
                 configuracion.asignacionProveedores[nombre] = { PRODUCTO: [], SERVICIO: [] };
                 document.getElementById('nuevoEvaluador').value = '';
+                if (document.getElementById('emailNuevoEvaluador')) {
+                    document.getElementById('emailNuevoEvaluador').value = '';
+                }
+                setFormNuevoEvaluadorVisible(false);
                 await inicializarEvaluadores();
                 await inicializarAsignaciones();
             } catch (error) {
                 console.error('Error al crear evaluador:', error);
-                alert('❌ Error al crear el evaluador. Por favor, intente nuevamente.');
+                alert(error.message || 'Error al crear el evaluador. Por favor, intente nuevamente.');
             }
         };
     }
@@ -2809,6 +2916,15 @@ async function guardarGeneral() {
             configuracion.zonaHorariaEncuesta = zonaHorariaInput.value || 'America/Santiago';
         }
 
+        const minutosSesionInput = document.getElementById('minutosSesion');
+        if (minutosSesionInput) {
+            let mins = parseInt(minutosSesionInput.value, 10);
+            if (!Number.isFinite(mins) || mins < 1) mins = 10;
+            if (mins > 240) mins = 240;
+            configuracion.minutosSesion = mins;
+            minutosSesionInput.value = mins;
+        }
+
         // Guardar en la base de datos
         const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor (10s).')), 10000)
@@ -3123,6 +3239,15 @@ async function guardarConfiguracionCompleta() {
             configuracion.zonaHorariaEncuesta = zonaHorariaInput.value || 'America/Santiago';
         }
 
+        const minutosSesionInput = document.getElementById('minutosSesion');
+        if (minutosSesionInput) {
+            let mins = parseInt(minutosSesionInput.value, 10);
+            if (!Number.isFinite(mins) || mins < 1) mins = 10;
+            if (mins > 240) mins = 240;
+            configuracion.minutosSesion = mins;
+            minutosSesionInput.value = mins;
+        }
+
         // Guardar ítems de PRODUCTO
         configuracion.itemsProducto = [];
         document.querySelectorAll('#itemsProductoContainer .item-editor').forEach(editor => {
@@ -3185,7 +3310,8 @@ async function guardarConfiguracionCompleta() {
             anioEncuesta: configuracion.anioEncuesta,
             fechaInicioEncuesta: configuracion.fechaInicioEncuesta,
             fechaFinEncuesta: configuracion.fechaFinEncuesta,
-            zonaHorariaEncuesta: configuracion.zonaHorariaEncuesta
+            zonaHorariaEncuesta: configuracion.zonaHorariaEncuesta,
+            minutosSesion: configuracion.minutosSesion
         });
 
         // Establecer un límite de tiempo de 10 segundos para evitar que la UI quede congelada si Supabase no responde

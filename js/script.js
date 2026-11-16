@@ -145,6 +145,165 @@ const escalaRespuesta = [25, 50, 75, 100];
 // Sistema de navegación por pasos
 let pasoActual = 0;
 const totalPasos = 5;
+let encuestaFueraDeRango = false;
+
+// Zona por defecto Chile: Intl aplica solo el cambio de horario (verano/invierno)
+function zonaEncuesta(config) {
+    const cfg = config || configEvaluacion || {};
+    return cfg.zonaHorariaEncuesta || 'America/Santiago';
+}
+
+// Lee "ahora" en la zona de la encuesta (respeta DST de Chile)
+function ahoraEnZona(timeZone) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timeZone || 'America/Santiago',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const get = (type) => Number(parts.find(p => p.type === type)?.value || 0);
+    return {
+        year: get('year'),
+        month: get('month'),
+        day: get('day'),
+        hour: get('hour'),
+        minute: get('minute'),
+        second: get('second')
+    };
+}
+
+// Hora configurada en admin = reloj de pared en esa zona (ignora Z/UTC del string)
+function parseFechaConfigParts(fechaHoraStr) {
+    if (!fechaHoraStr) return null;
+    const limpio = String(fechaHoraStr).trim().replace(/Z$/i, '').split('.')[0];
+    const [fechaParte, horaParte] = limpio.split('T');
+    if (!fechaParte) return null;
+    const [anio, mes, dia] = fechaParte.split('-').map(Number);
+    if (!anio || !mes || !dia) return null;
+    let horas = 0;
+    let minutos = 0;
+    let segundos = 0;
+    if (horaParte) {
+        const parts = horaParte.split(':').map(Number);
+        horas = parts[0] || 0;
+        minutos = parts[1] || 0;
+        segundos = parts[2] || 0;
+    }
+    return { year: anio, month: mes, day: dia, hour: horas, minute: minutos, second: segundos };
+}
+
+function claveReloj(p) {
+    if (!p) return null;
+    return (
+        p.year * 1e10 +
+        p.month * 1e8 +
+        p.day * 1e6 +
+        p.hour * 1e4 +
+        p.minute * 100 +
+        (p.second || 0)
+    );
+}
+
+function formatearPartsConfig(parts, timeZone) {
+    if (!parts) return '';
+    // Formatea usando un instante UTC aproximado; el texto muestra la hora de pared configurada
+    const approx = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second || 0));
+    try {
+        return approx.toLocaleString('es-CL', {
+            timeZone: timeZone || 'America/Santiago',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        const dd = String(parts.day).padStart(2, '0');
+        const mm = String(parts.month).padStart(2, '0');
+        const hh = String(parts.hour).padStart(2, '0');
+        const mi = String(parts.minute).padStart(2, '0');
+        return `${dd}/${mm}/${parts.year}, ${hh}:${mi}`;
+    }
+}
+
+function formatearFechaConfigPartsFija(parts) {
+    if (!parts) return '';
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const hh = String(parts.hour).padStart(2, '0');
+    const mi = String(parts.minute).padStart(2, '0');
+    return `${parts.day} de ${meses[parts.month - 1]} de ${parts.year} a las ${hh}:${mi}`;
+}
+
+function obtenerEstadoEncuesta(config) {
+    const cfg = config || configEvaluacion || {};
+    const tz = zonaEncuesta(cfg);
+    const fechaInicio = parseFechaConfigParts(cfg.fechaInicioEncuesta);
+    const fechaFin = parseFechaConfigParts(cfg.fechaFinEncuesta);
+    const ahoraParts = ahoraEnZona(tz);
+    const ahoraKey = claveReloj(ahoraParts);
+    const inicioKey = claveReloj(fechaInicio);
+    const finKey = claveReloj(fechaFin);
+
+    let fueraDeRango = false;
+    let tipoMensaje = 'info';
+    let mensaje = '';
+
+    if (!fechaInicio && !fechaFin) {
+        return { fueraDeRango: false, tipoMensaje: 'info', mensaje: '', fechaInicio, fechaFin, ahora: ahoraParts, zona: tz };
+    }
+
+    if (fechaInicio && fechaFin) {
+        if (ahoraKey < inicioKey) {
+            fueraDeRango = true;
+            tipoMensaje = 'warning';
+            mensaje = `La encuesta estará disponible desde el ${formatearFechaConfigPartsFija(fechaInicio)} hasta el ${formatearFechaConfigPartsFija(fechaFin)}.`;
+        } else if (ahoraKey > finKey) {
+            fueraDeRango = true;
+            tipoMensaje = 'error';
+            mensaje = `La encuesta ya no está disponible. El período de evaluación finalizó el ${formatearFechaConfigPartsFija(fechaFin)}.`;
+        } else {
+            mensaje = `La encuesta está disponible desde el ${formatearFechaConfigPartsFija(fechaInicio)} hasta el ${formatearFechaConfigPartsFija(fechaFin)}.`;
+        }
+    } else if (fechaInicio) {
+        if (ahoraKey < inicioKey) {
+            fueraDeRango = true;
+            tipoMensaje = 'warning';
+            mensaje = `La encuesta estará disponible a partir del ${formatearFechaConfigPartsFija(fechaInicio)}.`;
+        } else {
+            mensaje = `La encuesta está disponible desde el ${formatearFechaConfigPartsFija(fechaInicio)}.`;
+        }
+    } else if (fechaFin) {
+        if (ahoraKey > finKey) {
+            fueraDeRango = true;
+            tipoMensaje = 'error';
+            mensaje = `La encuesta ya no está disponible. El período de evaluación finalizó el ${formatearFechaConfigPartsFija(fechaFin)}.`;
+        } else {
+            mensaje = `La encuesta estará disponible hasta el ${formatearFechaConfigPartsFija(fechaFin)}.`;
+        }
+    }
+
+    return { fueraDeRango, tipoMensaje, mensaje, fechaInicio, fechaFin, ahora: ahoraParts, zona: tz };
+}
+
+function syncBotonComenzar() {
+    const checkbox = document.getElementById('privacyConsent');
+    const comenzarBtn = document.getElementById('comenzarBtn');
+    if (!comenzarBtn) return;
+    const okPrivacidad = !!(checkbox && checkbox.checked);
+    const okPeriodo = !encuestaFueraDeRango;
+    const ok = okPrivacidad && okPeriodo;
+    comenzarBtn.disabled = !ok;
+    comenzarBtn.classList.toggle('is-disabled', !ok);
+    comenzarBtn.style.opacity = ok ? '1' : '0.5';
+    comenzarBtn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
+
+window.syncBotonComenzar = syncBotonComenzar;
+window.obtenerEstadoEncuesta = obtenerEstadoEncuesta;
 
 function mostrarPaso(paso) {
     // Ocultar todos los pasos
@@ -172,24 +331,26 @@ function mostrarPaso(paso) {
         // if (itemsSection) itemsSection.style.display = 'none';
     }
 
-    // Actualizar indicador de progreso
-    document.querySelectorAll('.progress-step').forEach((step, index) => {
+    // Actualizar indicador de progreso (pasos visibles: 0, 1, 3, 4)
+    const ordenProgreso = [0, 1, 3, 4];
+    const pasoProgreso = paso === 2 ? 1 : paso;
+    const indiceActual = ordenProgreso.indexOf(pasoProgreso);
+    document.querySelectorAll('.progress-step').forEach((step) => {
         step.classList.remove('active', 'completed');
-        if (index < paso) {
-            step.classList.add('completed');
-        } else if (index === paso) {
-            step.classList.add('active');
-        }
+        const stepNum = Number(step.getAttribute('data-step'));
+        const indice = ordenProgreso.indexOf(stepNum);
+        if (indice === -1) return;
+        if (indice < indiceActual) step.classList.add('completed');
+        if (indice === indiceActual) step.classList.add('active');
     });
 
-    // Mostrar/ocultar indicador de progreso
     const progressIndicator = document.getElementById('progressIndicator');
     if (progressIndicator) {
-        if (paso === 0) {
-            progressIndicator.style.display = 'none';
-        } else {
-            progressIndicator.style.display = 'flex';
-        }
+        progressIndicator.style.display = 'flex';
+    }
+
+    if (paso === 1 && typeof window.refrescarTableroEvaluador === 'function') {
+        window.refrescarTableroEvaluador();
     }
 
     pasoActual = paso;
@@ -198,67 +359,11 @@ function mostrarPaso(paso) {
 function siguientePaso() {
     // Verificar si la encuesta está disponible (solo en paso 0)
     if (pasoActual === 0) {
-        const ahora = new Date();
-
-        // Parsear fechas manualmente para evitar problemas de zona horaria
-        let fechaInicio = null;
-        let fechaFin = null;
-
-        if (configEvaluacion?.fechaInicioEncuesta) {
-            const fechaHoraStr = configEvaluacion.fechaInicioEncuesta;
-            const [fechaParte, horaParte] = fechaHoraStr.split('T');
-            if (fechaParte && horaParte) {
-                const [anio, mes, dia] = fechaParte.split('-').map(Number);
-                const [horas, minutos] = horaParte.split(':').map(Number);
-                fechaInicio = new Date(anio, mes - 1, dia, horas, minutos || 0, 0, 0);
-            }
-        }
-
-        if (configEvaluacion?.fechaFinEncuesta) {
-            const fechaHoraStr = configEvaluacion.fechaFinEncuesta;
-            const [fechaParte, horaParte] = fechaHoraStr.split('T');
-            if (fechaParte && horaParte) {
-                const [anio, mes, dia] = fechaParte.split('-').map(Number);
-                const [horas, minutos] = horaParte.split(':').map(Number);
-                fechaFin = new Date(anio, mes - 1, dia, horas, minutos || 0, 0, 0);
-            }
-        }
-
-        let fueraDeRango = false;
-        let mensaje = '';
-
-        const formatearFecha = (fecha) => {
-            return fecha.toLocaleString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        };
-
-        if (fechaInicio && fechaFin) {
-            if (ahora < fechaInicio) {
-                fueraDeRango = true;
-                mensaje = `La encuesta estará disponible a partir del ${formatearFecha(fechaInicio)}.`;
-            } else if (ahora > fechaFin) {
-                fueraDeRango = true;
-                mensaje = `La encuesta ya no está disponible. El período de evaluación finalizó el ${formatearFecha(fechaFin)}.`;
-            }
-        } else if (fechaInicio) {
-            if (ahora < fechaInicio) {
-                fueraDeRango = true;
-                mensaje = `La encuesta estará disponible a partir del ${formatearFecha(fechaInicio)}.`;
-            }
-        } else if (fechaFin) {
-            if (ahora > fechaFin) {
-                fueraDeRango = true;
-                mensaje = `La encuesta ya no está disponible. El período de evaluación finalizó el ${formatearFecha(fechaFin)}.`;
-            }
-        }
-
-        if (fueraDeRango) {
-            alert(`⚠️ ${mensaje}`);
+        const estado = obtenerEstadoEncuesta();
+        encuestaFueraDeRango = estado.fueraDeRango;
+        syncBotonComenzar();
+        if (estado.fueraDeRango) {
+            alert(`⚠️ ${estado.mensaje}`);
             return;
         }
     }
@@ -269,25 +374,23 @@ function siguientePaso() {
     }
 
     if (pasoActual < totalPasos - 1) {
-        const siguiente = pasoActual + 1;
-
-        // Si estamos avanzando al paso 2, actualizar proveedores
+        // Desde el tablero (paso 1) solo se avanza eligiendo una tarjeta
         if (pasoActual === 1) {
-            actualizarProveedores().then(() => {
-                mostrarPaso(siguiente);
-            });
+            alert('Elige un proveedor pendiente para continuar.');
             return;
         }
 
-        // Si estamos avanzando al paso 3, mostrar items y correo
-        if (pasoActual === 2) {
+        let siguiente = pasoActual + 1;
+        if (pasoActual === 2) siguiente = 3;
+
+        // Si estamos avanzando al paso 3, mostrar items
+        if (siguiente === 3) {
             mostrarItemsEvaluacion();
         }
 
         // Si estamos avanzando al paso 4, calcular resultado y mostrar
         if (pasoActual === 3) {
             calcularResultado();
-            // Asegurar que el resultado se muestre
             const resultSection = document.getElementById('resultSection');
             if (resultSection) {
                 resultSection.style.display = 'block';
@@ -299,6 +402,18 @@ function siguientePaso() {
 }
 
 function anteriorPaso() {
+    // Paso 4 (resultado) → volver a ítems (paso 3)
+    if (pasoActual === 4) {
+        const itemsSection = document.getElementById('itemsSection');
+        if (itemsSection) itemsSection.style.display = 'block';
+        mostrarPaso(3);
+        return;
+    }
+    // Paso 3 → tablero (Mis proveedores)
+    if (pasoActual === 3) {
+        mostrarPaso(1);
+        return;
+    }
     if (pasoActual > 0) {
         mostrarPaso(pasoActual - 1);
     }
@@ -315,27 +430,16 @@ function validarPasoActual() {
     }
 
     switch (pasoActual) {
-        case 1:
-            const evaluador = document.getElementById('evaluador').value;
-            const tipoProveedor = document.querySelector('input[name="tipoProveedor"]:checked');
-
-            if (!evaluador) {
-                alert('Por favor seleccione un evaluador.');
-                return false;
-            }
-            if (!tipoProveedor) {
-                alert('Por favor seleccione un tipo de proveedor.');
+        case 1: {
+            const sesion = typeof window.getSesionEvaluador === 'function' ? window.getSesionEvaluador() : null;
+            if (!sesion) {
+                alert('Debes iniciar sesión con Google para continuar.');
                 return false;
             }
             return true;
+        }
 
         case 2:
-            const proveedor = document.getElementById('proveedor').value;
-
-            if (!proveedor) {
-                alert('Por favor seleccione un proveedor.');
-                return false;
-            }
             return true;
 
         case 3:
@@ -434,26 +538,14 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 });
 
-// Inicializar fecha de evaluación (mostrar fecha actual)
+// Fecha de evaluación interna (no se muestra en la interfaz)
 async function inicializarSelectorAnios(evaluaciones) {
     const anioInput = document.getElementById('anioEvaluacion');
-    const fechaTexto = document.getElementById('fechaTexto');
-
     if (!anioInput) return;
 
-    // Establecer fecha actual
     const hoy = new Date();
-    const fechaFormato = hoy.toISOString().split('T')[0]; // YYYY-MM-DD
-    anioInput.value = fechaFormato;
+    anioInput.value = hoy.toISOString().split('T')[0];
     anioInput.dataset.anio = hoy.getFullYear();
-
-    // Mostrar fecha formateada en español
-    if (fechaTexto) {
-        const dia = hoy.getDate();
-        const mes = hoy.toLocaleString('es-ES', { month: 'long' });
-        const anio = hoy.getFullYear();
-        fechaTexto.textContent = `${dia} de ${mes} de ${anio}`;
-    }
 }
 
 function actualizarInformacionDesdeConfig() {
@@ -490,159 +582,69 @@ function verificarRangoFechas() {
     const mensajeDiv = document.getElementById('mensajeRangoFechas');
     const mensajeTexto = document.getElementById('mensajeRangoTexto');
     const form = document.getElementById('evaluationForm');
+    const step0 = document.getElementById('step0');
     const comenzarBtn = document.getElementById('comenzarBtn');
 
     if (!mensajeDiv || !configEvaluacion) return;
 
-    const ahora = new Date();
+    const estado = obtenerEstadoEncuesta();
+    encuestaFueraDeRango = estado.fueraDeRango;
 
-    // Parsear fechas manualmente para evitar problemas de zona horaria
-    // Las fechas vienen en formato YYYY-MM-DDTHH:MM:SS (sin zona horaria)
-    let fechaInicio = null;
-    let fechaFin = null;
-
-    if (configEvaluacion.fechaInicioEncuesta) {
-        const fechaHoraStr = configEvaluacion.fechaInicioEncuesta;
-        // Extraer fecha y hora directamente sin conversión de zona horaria
-        const [fechaParte, horaParte] = fechaHoraStr.split('T');
-        if (fechaParte && horaParte) {
-            const [anio, mes, dia] = fechaParte.split('-').map(Number);
-            const [horas, minutos] = horaParte.split(':').map(Number);
-            // Crear fecha en hora local (no UTC)
-            fechaInicio = new Date(anio, mes - 1, dia, horas, minutos || 0, 0, 0);
-        }
-    }
-
-    if (configEvaluacion.fechaFinEncuesta) {
-        const fechaHoraStr = configEvaluacion.fechaFinEncuesta;
-        // Extraer fecha y hora directamente sin conversión de zona horaria
-        const [fechaParte, horaParte] = fechaHoraStr.split('T');
-        if (fechaParte && horaParte) {
-            const [anio, mes, dia] = fechaParte.split('-').map(Number);
-            const [horas, minutos] = horaParte.split(':').map(Number);
-            // Crear fecha en hora local (no UTC)
-            fechaFin = new Date(anio, mes - 1, dia, horas, minutos || 0, 0, 0);
-        }
-    }
-
-    if (!fechaInicio && !fechaFin) {
+    if (!estado.fechaInicio && !estado.fechaFin) {
         mensajeDiv.style.display = 'none';
         if (form) {
             form.style.pointerEvents = 'auto';
             form.style.opacity = '1';
         }
-        if (comenzarBtn) {
-            comenzarBtn.disabled = false;
-            comenzarBtn.title = '';
-        }
+        if (step0) step0.classList.remove('encuesta-cerrada');
+        syncBotonComenzar();
         return;
     }
 
-    let fueraDeRango = false;
-    let mensaje = '';
-    let tipoMensaje = 'info';
-
-    const formatearFecha = (fecha) => {
-        return fecha.toLocaleString('es-ES', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
-
-    if (fechaInicio && fechaFin) {
-        if (ahora < fechaInicio) {
-            fueraDeRango = true;
-            tipoMensaje = 'warning';
-            mensaje = `La encuesta estará disponible desde el ${formatearFecha(fechaInicio)} hasta el ${formatearFecha(fechaFin)}.`;
-        } else if (ahora > fechaFin) {
-            fueraDeRango = true;
-            tipoMensaje = 'error';
-            mensaje = `La encuesta ya no está disponible. El período de evaluación finalizó el ${formatearFecha(fechaFin)}.`;
-        } else {
-            tipoMensaje = 'info';
-            mensaje = `La encuesta está disponible desde el ${formatearFecha(fechaInicio)} hasta el ${formatearFecha(fechaFin)}.`;
-        }
-    } else if (fechaInicio) {
-        if (ahora < fechaInicio) {
-            fueraDeRango = true;
-            tipoMensaje = 'warning';
-            mensaje = `La encuesta estará disponible a partir del ${formatearFecha(fechaInicio)}.`;
-        } else {
-            tipoMensaje = 'info';
-            mensaje = `La encuesta está disponible desde el ${formatearFecha(fechaInicio)}.`;
-        }
-    } else if (fechaFin) {
-        if (ahora > fechaFin) {
-            fueraDeRango = true;
-            tipoMensaje = 'error';
-            mensaje = `La encuesta ya no está disponible. El período de evaluación finalizó el ${formatearFecha(fechaFin)}.`;
-        } else {
-            tipoMensaje = 'info';
-            mensaje = `La encuesta estará disponible hasta el ${formatearFecha(fechaFin)}.`;
-        }
-    }
-
     mensajeDiv.style.display = 'block';
-    if (mensajeTexto) mensajeTexto.innerHTML = mensaje;
+    if (mensajeTexto) mensajeTexto.innerHTML = estado.mensaje;
 
     const tituloMensaje = document.getElementById('mensajeRangoTitulo');
     if (tituloMensaje) {
-        if (tipoMensaje === 'error') {
+        if (estado.tipoMensaje === 'error') {
             tituloMensaje.textContent = 'La encuesta no está disponible';
-        } else if (tipoMensaje === 'warning') {
+        } else if (estado.tipoMensaje === 'warning') {
             tituloMensaje.textContent = 'La encuesta aún no está disponible';
         } else {
             tituloMensaje.textContent = 'Período de evaluación';
         }
+        tituloMensaje.style.color = '';
     }
+    if (mensajeTexto) mensajeTexto.style.color = '';
 
-    const icono = mensajeDiv.querySelector('.mensaje-icono');
-    if (tipoMensaje === 'error') {
-        mensajeDiv.style.background = 'linear-gradient(135deg, #fee 0%, #fcc 100%)';
-        mensajeDiv.style.borderColor = '#f33';
-        if (icono) icono.textContent = '❌';
-        if (tituloMensaje) tituloMensaje.style.color = '#c33';
-        if (mensajeTexto) mensajeTexto.style.color = '#c33';
-    } else if (tipoMensaje === 'warning') {
-        mensajeDiv.style.background = 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)';
-        mensajeDiv.style.borderColor = '#ffc107';
-        if (icono) icono.textContent = '⚠️';
-        if (tituloMensaje) tituloMensaje.style.color = '#856404';
-        if (mensajeTexto) mensajeTexto.style.color = '#856404';
-    } else {
-        mensajeDiv.style.background = 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)';
-        mensajeDiv.style.borderColor = '#10b981';
-        if (icono) icono.textContent = 'ℹ️';
-        if (tituloMensaje) tituloMensaje.style.color = '#065f46';
-        if (mensajeTexto) mensajeTexto.style.color = '#065f46';
-    }
+    mensajeDiv.classList.remove('period-error', 'period-warning', 'period-info');
+    mensajeDiv.classList.add(
+        estado.tipoMensaje === 'error' ? 'period-error' :
+        estado.tipoMensaje === 'warning' ? 'period-warning' : 'period-info'
+    );
+    mensajeDiv.style.background = '';
+    mensajeDiv.style.borderColor = '';
 
-    if (fueraDeRango) {
+    if (estado.fueraDeRango) {
         if (form) {
             form.style.pointerEvents = 'none';
-            form.style.opacity = '0.6';
+            form.style.opacity = '0.55';
         }
-        if (comenzarBtn) {
-            comenzarBtn.disabled = true;
-            comenzarBtn.style.opacity = '0.5';
-            comenzarBtn.style.cursor = 'not-allowed';
-            comenzarBtn.title = mensaje;
+        if (step0) step0.classList.add('encuesta-cerrada');
+        if (comenzarBtn) comenzarBtn.title = estado.mensaje;
+        // Si está en medio del flujo, volver a la portada
+        if (pasoActual > 0) {
+            mostrarPaso(0);
         }
     } else {
         if (form) {
             form.style.pointerEvents = 'auto';
             form.style.opacity = '1';
         }
-        if (comenzarBtn) {
-            comenzarBtn.disabled = false;
-            comenzarBtn.style.opacity = '1';
-            comenzarBtn.style.cursor = 'pointer';
-            comenzarBtn.title = '';
-        }
+        if (step0) step0.classList.remove('encuesta-cerrada');
+        if (comenzarBtn) comenzarBtn.title = '';
     }
+    syncBotonComenzar();
 }
 
 function actualizarCriteriosEnHTML() {
@@ -1063,38 +1065,15 @@ function calcularResultado() {
 }
 
 async function guardarEvaluacion() {
-    // Verificar rango de fechas antes de guardar (considerando hora)
-    const ahora = new Date(); // Usar fecha y hora actuales
-
-    const fechaInicio = configEvaluacion?.fechaInicioEncuesta ? new Date(configEvaluacion.fechaInicioEncuesta) : null;
-    const fechaFin = configEvaluacion?.fechaFinEncuesta ? new Date(configEvaluacion.fechaFinEncuesta) : null;
-
-    if (fechaInicio) {
-        if (ahora < fechaInicio) {
-            const fechaInicioFormateada = fechaInicio.toLocaleString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            alert(`⚠️ La encuesta aún no está disponible. Por favor, espere hasta el ${fechaInicioFormateada}.`);
-            return;
-        }
-    }
-
-    if (fechaFin) {
-        if (ahora > fechaFin) {
-            const fechaFinFormateada = fechaFin.toLocaleString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            alert(`⚠️ La encuesta ya no está disponible. El período de evaluación finalizó el ${fechaFinFormateada}.`);
-            return;
-        }
+    // Misma regla de fechas que el banner (hora local configurada, sin UTC)
+    const estado = obtenerEstadoEncuesta();
+    encuestaFueraDeRango = estado.fueraDeRango;
+    syncBotonComenzar();
+    if (estado.fueraDeRango) {
+        alert(`⚠️ ${estado.mensaje}`);
+        mostrarPaso(0);
+        verificarRangoFechas();
+        return;
     }
 
     const evaluador = document.getElementById('evaluador').value;
@@ -1187,14 +1166,30 @@ async function guardarEvaluacion() {
 
         console.log('✅ Evaluación guardada exitosamente');
 
-        // Mostrar modal de éxito
+        document.getElementById('itemsContainer').innerHTML = '';
+        document.getElementById('itemsSection').style.display = 'none';
+        document.getElementById('resultSection').style.display = 'none';
+        const evalContext = document.getElementById('evalContext');
+        if (evalContext) evalContext.innerHTML = '';
+
+        // Volver al tablero (paso 2 visual / paso 1 interno). Si no quedan, el tablero muestra vacío y Salir.
+        mostrarPaso(1);
+        let pendientesRestantes = null;
+        if (typeof window.refrescarTableroEvaluador === 'function') {
+            const data = await window.refrescarTableroEvaluador();
+            pendientesRestantes = data && typeof data.pendientesCount === 'number'
+                ? data.pendientesCount
+                : null;
+        }
+
+        const modalMsg = document.querySelector('#successModal p');
+        if (modalMsg) {
+            modalMsg.textContent = pendientesRestantes === 0
+                ? 'Evaluación enviada. No te quedan proveedores pendientes. Puedes salir cuando quieras.'
+                : 'Evaluación enviada. Volviendo a tus proveedores pendientes.';
+        }
         mostrarModalExito();
-        limpiarFormulario();
-        await actualizarProveedores();
-        // Volver al inicio (paso 0) después de cerrar el modal
-        setTimeout(() => {
-            mostrarPaso(0);
-        }, 500);
+        setTimeout(() => cerrarModalExito(), 1600);
     } catch (error) {
         console.error('Error al guardar evaluación:', error);
         alert(error.message || 'Error al guardar la evaluación. Por favor, intente nuevamente.');
@@ -1234,25 +1229,31 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function limpiarFormulario() {
-    document.getElementById('evaluationForm').reset();
     document.getElementById('proveedor').innerHTML = '<option value="">-- Primero seleccione el tipo de proveedor --</option>';
     document.getElementById('itemsContainer').innerHTML = '';
     document.getElementById('itemsSection').style.display = 'none';
     document.getElementById('resultSection').style.display = 'none';
+    const evalContext = document.getElementById('evalContext');
+    if (evalContext) evalContext.innerHTML = '';
 
-    // Restablecer fecha actual (actualizar el display)
-    const fechaTexto = document.getElementById('fechaTexto');
     const anioInput = document.getElementById('anioEvaluacion');
-    if (anioInput && fechaTexto) {
+    if (anioInput) {
         const hoy = new Date();
         anioInput.value = hoy.toISOString().split('T')[0];
-        const dia = hoy.getDate();
-        const mes = hoy.toLocaleString('es-ES', { month: 'long' });
-        const anio = hoy.getFullYear();
-        fechaTexto.textContent = `${dia} de ${mes} de ${anio}`;
+        anioInput.dataset.anio = hoy.getFullYear();
     }
 
-    // Volver al paso inicial
+    const sesion = typeof window.getSesionEvaluador === 'function' ? window.getSesionEvaluador() : null;
+    if (sesion) {
+        const evaluador = document.getElementById('evaluador');
+        if (evaluador) evaluador.value = sesion.nombre;
+        mostrarPaso(1);
+        if (typeof window.refrescarTableroEvaluador === 'function') {
+            window.refrescarTableroEvaluador();
+        }
+        return;
+    }
+
     actualizarEstadoCategorias();
     mostrarPaso(0);
 }

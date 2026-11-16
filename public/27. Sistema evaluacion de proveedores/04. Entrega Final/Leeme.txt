@@ -1,0 +1,3 @@
+Esta carpeta queda vacía a propósito, mientras el trabajo sigue en avances.
+
+Aquí irá el paquete de cierre cuando corresponda. No hay archivos que mover todavía.

@@ -5,266 +5,307 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Evaluación de Proveedores</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="js/supabase-service.js?v=61"></script>
+    <link rel="icon" href="public/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=94">
+    <script>
+        (function () {
+            var tema = localStorage.getItem('auraTema');
+            document.documentElement.setAttribute('data-theme', tema === 'dark' ? 'dark' : 'light');
+        })();
+    </script>
+    <script src="js/supabase-service.js?v=84"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 
-<body>
-    <div class="container">
-        <!-- Mensaje de rango de fechas -->
-        <div id="mensajeRangoFechas" class="mensaje-rango-fechas" style="display: none;">
-            <div class="mensaje-rango-contenido">
-                <span class="mensaje-icono">ℹ️</span>
-                <div class="mensaje-texto">
-                    <strong id="mensajeRangoTitulo">Información de disponibilidad</strong>
-                    <p id="mensajeRangoTexto"></p>
+<body class="app-page">
+    <div class="page-shell">
+        <header class="page-topbar">
+            <div class="brand-lockup">
+                <img src="public/favicon.png" alt="Aura" class="brand-logo">
+                <div class="brand-text">
+                    <strong>Aura Ingenieria</strong>
                 </div>
             </div>
-        </div>
 
-        <header>
-            <h1 id="tituloPrincipal">Evaluación de Proveedores</h1>
+            <div id="mensajeRangoFechas" class="period-badge" style="display: none;">
+                <div class="mensaje-rango-contenido">
+                    <span class="mensaje-icono" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                            <path d="M8 3v4M16 3v4M3 11h18"></path>
+                        </svg>
+                    </span>
+                    <div class="mensaje-texto">
+                        <strong id="mensajeRangoTitulo">Período de evaluación</strong>
+                        <p id="mensajeRangoTexto"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="sessionTimerBar" class="session-timer-bar" hidden>
+                <span class="session-timer-text">Tu sesión finaliza en <strong id="sessionCountdown">10:00</strong></span>
+                <span class="session-sep" aria-hidden="true">|</span>
+                <button type="button" id="cerrarSesionEvaluadorBtn" class="session-logout" title="Cerrar sesión">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10"/><path d="M6.3 6.3a7.5 7.5 0 1 0 11.4 0"/></svg>
+                    <span>Cerrar sesión</span>
+                </button>
+            </div>
+
+            <button type="button" id="temaBtn" class="tema-btn" data-tema-toggle aria-label="Cambiar color de la página">
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z"></path></svg>
+            </button>
         </header>
 
-        <!-- Indicador de Progreso -->
-        <div class="progress-indicator" id="progressIndicator" style="display: none;">
+        <section class="page-hero">
+            <h1 id="tituloPrincipal">Evaluación de Proveedores</h1>
+            <p class="page-hero-sub">Tu opinión nos ayuda a construir relaciones comerciales más sólidas y eficientes.</p>
+        </section>
+
+        <div class="progress-indicator" id="progressIndicator">
             <div class="progress-step active" data-step="0">
                 <div class="progress-step-number">1</div>
                 <div class="progress-step-label">Información</div>
             </div>
             <div class="progress-step" data-step="1">
                 <div class="progress-step-number">2</div>
-                <div class="progress-step-label">Datos Iniciales</div>
-            </div>
-            <div class="progress-step" data-step="2">
-                <div class="progress-step-number">3</div>
-                <div class="progress-step-label">Proveedor</div>
+                <div class="progress-step-label">Mis proveedores</div>
             </div>
             <div class="progress-step" data-step="3">
-                <div class="progress-step-number">4</div>
+                <div class="progress-step-number">3</div>
                 <div class="progress-step-label">Evaluación</div>
             </div>
             <div class="progress-step" data-step="4">
-                <div class="progress-step-number">5</div>
+                <div class="progress-step-number">4</div>
                 <div class="progress-step-label">Resultado</div>
             </div>
         </div>
 
-        <!-- Paso 0: Información -->
-        <div class="form-step active" id="step0" data-step="0">
-            <section class="info-section">
-                <div class="info-content">
-                    <h2>📋 ¿Qué es esta evaluación?</h2>
-                    <p id="descripcionEvaluacion">Este sistema permite evaluar el desempeño de nuestros proveedores
-                        mediante un proceso estructurado y objetivo, considerando diferentes aspectos según el tipo de
-                        proveedor (Producto o Servicio).</p>
+        <main class="page-main container">
+            <!-- Paso 0: Bienvenida -->
+            <div class="form-step active" id="step0" data-step="0">
+                <section class="split-panel welcome-split">
+                    <aside class="split-visual" aria-hidden="true">
+                        <div class="visual-art">
+                            <svg class="art-clipboard" viewBox="0 0 180 220" fill="none">
+                                <rect x="36" y="28" width="108" height="168" rx="16" fill="#2563eb"/>
+                                <rect x="48" y="44" width="84" height="136" rx="10" fill="#eff6ff"/>
+                                <rect x="62" y="12" width="56" height="28" rx="8" fill="#1e40af"/>
+                                <circle cx="90" cy="26" r="7" fill="#93c5fd"/>
+                                <path d="M68 88h44M68 112h44M68 136h28" stroke="#93c5fd" stroke-width="8" stroke-linecap="round"/>
+                                <circle cx="68" cy="88" r="8" fill="#22c55e"/>
+                                <path d="M64 88l3 3 6-7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                                <circle cx="68" cy="112" r="8" fill="#22c55e"/>
+                                <path d="M64 112l3 3 6-7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                                <circle cx="68" cy="136" r="8" fill="#22c55e"/>
+                                <path d="M64 136l3 3 6-7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <svg class="art-shield" viewBox="0 0 96 112" fill="none">
+                                <path d="M48 8l36 14v28c0 24-14 42-36 54C26 92 12 74 12 50V22L48 8z" fill="#1d4ed8"/>
+                                <path d="M36 56l8 8 18-20" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <p class="visual-caption">Evaluación objetiva, segura y trazable</p>
+                    </aside>
 
-                    <h3>🎯 Objetivo</h3>
-                    <p id="objetivoEvaluacion">Medir y mejorar continuamente la calidad de nuestros proveedores,
-                        asegurando que cumplan con los estándares requeridos en términos de:</p>
-                    <ul>
-                        <li>Calidad de productos/servicios</li>
-                        <li>Cumplimiento de plazos</li>
-                        <li>Comunicación y respuesta</li>
-                        <li>Certificaciones y cumplimiento normativo</li>
-                    </ul>
+                    <div class="split-access welcome-copy">
+                        <div class="access-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3z"></path>
+                                <path d="M9 12l2 2 4-4"></path>
+                            </svg>
+                        </div>
+                        <h2 class="welcome-title">¿Listo para evaluar?</h2>
+                        <div class="welcome-text">
+                            <p class="welcome-lead" id="descripcionEvaluacion">Este sistema permite medir el desempeño de tus proveedores asignados con criterios claros y resultado automático.</p>
+                            <p class="welcome-objective" id="objetivoEvaluacion">Medimos calidad, plazos, comunicación y cumplimiento para mejorar de forma continua.</p>
+                        </div>
 
-                    <h3>📊 ¿Cómo funciona la evaluación?</h3>
-                    <div class="process-steps">
-                        <div class="step">
-                            <div class="step-number">1</div>
-                            <div class="step-content">
-                                <strong>Selección del Evaluador</strong>
-                                <p>Cada evaluador tiene asignados proveedores específicos según su área de
-                                    responsabilidad.</p>
+                        <div class="welcome-mini-steps" aria-label="Pasos">
+                            <div class="welcome-mini-step">
+                                <strong>1</strong>
+                                <span>Inicia sesión</span>
+                            </div>
+                            <div class="welcome-mini-step">
+                                <strong>2</strong>
+                                <span>Elige proveedor</span>
+                            </div>
+                            <div class="welcome-mini-step">
+                                <strong>3</strong>
+                                <span>Califica y envía</span>
                             </div>
                         </div>
-                        <div class="step">
-                            <div class="step-number">2</div>
-                            <div class="step-content">
-                                <strong>Tipo de Proveedor</strong>
-                                <p>Selecciona si el proveedor es de <strong>PRODUCTO</strong> o
-                                    <strong>SERVICIO</strong> ya que cada tipo tiene criterios de evaluación diferentes.
+
+                        <details class="welcome-criteria">
+                            <summary>Ver criterios de evaluación</summary>
+                            <div class="welcome-criteria-grid">
+                                <div class="criteria-box" id="criteriaProducto">
+                                    <h4>Producto</h4>
+                                    <p id="textoProducto">Se evalúan <span id="cantidadProducto">7</span> aspectos:</p>
+                                    <ul id="listaProducto"></ul>
+                                </div>
+                                <div class="criteria-box" id="criteriaServicio">
+                                    <h4>Servicio</h4>
+                                    <p id="textoServicio">Se evalúan <span id="cantidadServicio">6</span> aspectos:</p>
+                                    <ul id="listaServicio"></ul>
+                                </div>
+                            </div>
+                        </details>
+
+                        <div class="privacy-consent-box">
+                            <label class="privacy-consent-label" for="privacyConsent">
+                                <input type="checkbox" id="privacyConsent">
+                                <span>
+                                    Acepto el tratamiento de mis datos personales para esta evaluación, conforme a la
+                                    <a href="privacidad.html" target="_blank" rel="noopener">Ley N° 21.719</a>.
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="welcome-nav">
+                            <button type="button" id="comenzarBtn" class="btn-comenzar" onclick="siguientePaso()" disabled>Comenzar</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <form id="evaluationForm">
+                <!-- Paso 1: Acceso Google + tablero -->
+                <div class="form-step" id="step1" data-step="1">
+                    <section class="form-section portal-section">
+                        <div id="portalLogin" class="split-panel login-split">
+                            <aside class="split-visual" aria-hidden="true">
+                                <div class="visual-art">
+                                    <svg class="art-clipboard" viewBox="0 0 180 220" fill="none">
+                                        <rect x="36" y="28" width="108" height="168" rx="16" fill="#2563eb"/>
+                                        <rect x="48" y="44" width="84" height="136" rx="10" fill="#eff6ff"/>
+                                        <rect x="62" y="12" width="56" height="28" rx="8" fill="#1e40af"/>
+                                        <circle cx="90" cy="26" r="7" fill="#93c5fd"/>
+                                        <path d="M68 88h44M68 112h44M68 136h28" stroke="#93c5fd" stroke-width="8" stroke-linecap="round"/>
+                                        <circle cx="68" cy="88" r="8" fill="#22c55e"/>
+                                        <path d="M64 88l3 3 6-7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                                        <circle cx="68" cy="112" r="8" fill="#22c55e"/>
+                                        <path d="M64 112l3 3 6-7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                                        <circle cx="68" cy="136" r="8" fill="#22c55e"/>
+                                        <path d="M64 136l3 3 6-7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                    <svg class="art-shield" viewBox="0 0 96 112" fill="none">
+                                        <path d="M48 8l36 14v28c0 24-14 42-36 54C26 92 12 74 12 50V22L48 8z" fill="#1d4ed8"/>
+                                        <path d="M36 56l8 8 18-20" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <p class="visual-caption">Acceso solo para evaluadores autorizados</p>
+                            </aside>
+
+                            <div class="split-access portal-login-inner">
+                                <div class="access-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                                        <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+                                    </svg>
+                                </div>
+                                <h2>Acceso del evaluador</h2>
+                                <p class="portal-copy">Inicia sesión con el correo que el administrador registró para ti.</p>
+                                <input type="hidden" id="anioEvaluacion" required>
+                                <div id="googleSignInSlot" class="google-signin-slot"></div>
+                                <p id="portalLoginError" class="portal-error" hidden></p>
+                                <p id="portalLoginHint" class="portal-hint portal-hint-ok">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                                    Acceso restringido. Si no puedes entrar, contacta al administrador.
                                 </p>
                             </div>
                         </div>
-                        <div class="step">
-                            <div class="step-number">3</div>
-                            <div class="step-content">
-                                <strong>Evaluación por Ítems</strong>
-                                <p>Cada ítem se califica con: <strong>25%</strong> <strong>50%</strong>
-                                    <strong>75%</strong> o <strong>100%</strong> según el cumplimiento observado.
-                                </p>
+
+                        <div id="portalBoard" class="portal-board" hidden>
+                            <div class="portal-userbar">
+                                <div class="portal-user-main">
+                                    <div class="portal-avatar" id="portalUserAvatar" aria-hidden="true">E</div>
+                                    <div class="portal-user-text">
+                                        <strong id="portalUserName">Evaluador</strong>
+                                        <span id="portalUserEmail"></span>
+                                    </div>
+                                </div>
                             </div>
+                            <div class="portal-summary">
+                                <h2>Proveedores por evaluar</h2>
+                                <p id="portalSummaryText">Elige un proveedor para continuar.</p>
+                            </div>
+                            <div id="portalCards" class="portal-cards"></div>
+                            <div id="portalEmpty" class="portal-empty" hidden>
+                                <strong>No tienes proveedores pendientes</strong>
+                                <p>Ya completaste las evaluaciones asignadas para este año.</p>
+                            </div>
+                            <div id="portalDoneList" class="portal-done" hidden></div>
                         </div>
-                        <div class="step">
-                            <div class="step-number">4</div>
-                            <div class="step-content">
-                                <strong>Cálculo Automático</strong>
-                                <p>El sistema calcula automáticamente el resultado final ponderado, considerando la
-                                    importancia de cada ítem.</p>
-                            </div>
+
+                        <select id="evaluador" required hidden aria-hidden="true">
+                            <option value="">-- Seleccione un evaluador --</option>
+                        </select>
+                        <div class="radio-group portal-hidden-fields" id="tipoProveedorGroup" hidden aria-hidden="true">
+                            <label id="labelProducto">
+                                <div>
+                                    <input type="radio" name="tipoProveedor" value="PRODUCTO" required>
+                                    <span>PRODUCTO</span>
+                                </div>
+                                <small class="badge-progreso" id="badgeProducto"></small>
+                            </label>
+                            <label id="labelServicio">
+                                <div>
+                                    <input type="radio" name="tipoProveedor" value="SERVICIO" required>
+                                    <span>SERVICIO</span>
+                                </div>
+                                <small class="badge-progreso" id="badgeServicio"></small>
+                            </label>
                         </div>
-                    </div>
-
-                    <h3>📈 Criterios de Evaluación</h3>
-
-                    <div class="criteria-box" id="criteriaProducto">
-                        <h4>🟦 Proveedores de PRODUCTO</h4>
-                        <p id="textoProducto">Se evalúan <span id="cantidadProducto">7</span> aspectos con las
-                            siguientes ponderaciones:</p>
-                        <ul id="listaProducto">
-                            <!-- Se llena dinámicamente desde la configuración -->
-                        </ul>
-                    </div>
-
-                    <div class="criteria-box" id="criteriaServicio">
-                        <h4>🟩 Proveedores de SERVICIO</h4>
-                        <p id="textoServicio">Se evalúan <span id="cantidadServicio">6</span> aspectos con las
-                            siguientes ponderaciones:</p>
-                        <ul id="listaServicio">
-                            <!-- Se llena dinámicamente desde la configuración -->
-                        </ul>
-                    </div>
-
-                    <div class="info-note">
-                        <strong>⚠️ Importante:</strong> Cada evaluador solo puede evaluar a los proveedores que tiene
-                        asignados. Una vez evaluado un proveedor, no aparecerá nuevamente en la lista hasta que se
-                        elimine la evaluación anterior.
-                    </div>
-
-                    <!-- Consentimiento de Privacidad y Protección de Datos Ley 21.719 -->
-                    <div class="privacy-consent-box" style="
-                        margin-top: 25px;
-                        padding: 16px;
-                        background: #f8fafc;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 10px;
-                        text-align: left;
-                    ">
-                        <label style="
-                            display: flex;
-                            align-items: flex-start;
-                            gap: 12px;
-                            cursor: pointer;
-                            font-size: 0.95rem;
-                            color: #334155;
-                            line-height: 1.5;
-                        ">
-                            <input type="checkbox" id="privacyConsent" style="
-                                margin-top: 3px;
-                                width: 18px;
-                                height: 18px;
-                                cursor: pointer;
-                                accent-color: #667eea;
-                            ">
-                            <span>
-                                Acepto el tratamiento de mis datos personales para los fines exclusivos de esta evaluación de proveedores, en conformidad con la 
-                                <a href="privacidad.html" target="_blank" style="
-                                    color: #4f46e5;
-                                    text-decoration: underline;
-                                    font-weight: 600;
-                                ">Ley de Protección de Datos Personales N° 21.719</a>.
-                            </span>
-                        </label>
+                        <select id="proveedor" required hidden aria-hidden="true">
+                            <option value="">-- Primero seleccione el tipo de proveedor --</option>
+                        </select>
+                    </section>
+                    <div class="step-navigation" id="portalNavBack">
+                        <button type="button" class="btn-prev" onclick="anteriorPaso()">← Anterior</button>
                     </div>
                 </div>
-            </section>
-            <div class="step-navigation">
-                <button type="button" id="comenzarBtn" class="btn-next" onclick="siguientePaso()" disabled style="opacity: 0.5; cursor: not-allowed;">Comenzar →</button>
-            </div>
-        </div>
 
-        <form id="evaluationForm">
-            <!-- Paso 1: Evaluador, Fecha y Tipo -->
-            <div class="form-step" id="step1" data-step="1">
-                <section class="form-section">
-                    <h2>1. Seleccione el Evaluador</h2>
-                    <select id="evaluador" required>
-                        <option value="">-- Seleccione un evaluador --</option>
-                    </select>
-                </section>
+                <div class="form-step" id="step2" data-step="2" hidden></div>
 
-                <section class="form-section">
-                    <h2>2. Fecha de Evaluación</h2>
-                    <div class="fecha-display" id="fechaDisplay">
-                        <span id="fechaTexto"></span>
+                <div class="form-step" id="step3" data-step="3">
+                    <section class="form-section content-panel" id="itemsSection" style="display: none;">
+                        <div class="eval-context" id="evalContext"></div>
+                        <h2 id="itemsTitle">Ítems de Evaluación</h2>
+                        <div id="itemsContainer"></div>
+                    </section>
+                    <div class="step-navigation">
+                        <button type="button" class="btn-prev" id="volverAlTableroBtn">← Volver al tablero</button>
+                        <button type="button" class="btn-next" onclick="siguientePaso()">Siguiente →</button>
                     </div>
-                    <input type="hidden" id="anioEvaluacion" required>
-                    <small>La fecha de evaluación corresponde al día de hoy</small>
-                </section>
+                </div>
 
-                <section class="form-section">
-                    <h2>3. Tipo de Proveedor</h2>
-                    <div class="radio-group" id="tipoProveedorGroup">
-                        <label id="labelProducto">
-                            <div>
-                                <input type="radio" name="tipoProveedor" value="PRODUCTO" required disabled>
-                                <span>PRODUCTO</span>
-                            </div>
-                            <small class="badge-progreso" id="badgeProducto"></small>
-                        </label>
-                        <label id="labelServicio">
-                            <div>
-                                <input type="radio" name="tipoProveedor" value="SERVICIO" required disabled>
-                                <span>SERVICIO</span>
-                            </div>
-                            <small class="badge-progreso" id="badgeServicio"></small>
-                        </label>
+                <div class="form-step" id="step4" data-step="4">
+                    <section class="form-section content-panel" id="resultSection">
+                        <h2>Resultado Final</h2>
+                        <div class="result-box">
+                            <div class="result-label">Resultado Ponderado:</div>
+                            <div class="result-value" id="resultadoFinal">0%</div>
+                        </div>
+                    </section>
+                    <div class="step-navigation">
+                        <button type="button" class="btn-prev" onclick="anteriorPaso()">← Anterior</button>
+                        <button type="submit" id="guardarBtn" class="btn-save" style="margin-left: auto;">Guardar evaluación</button>
                     </div>
-                </section>
-                <div class="step-navigation">
-                    <button type="button" class="btn-prev" onclick="anteriorPaso()">← Anterior</button>
-                    <button type="button" class="btn-next" onclick="siguientePaso()">Siguiente →</button>
                 </div>
-            </div>
+            </form>
+        </main>
 
-            <!-- Paso 2: Proveedor y Correo -->
-            <div class="form-step" id="step2" data-step="2">
-                <section class="form-section">
-                    <h2>4. Seleccione el Proveedor</h2>
-                    <select id="proveedor" required>
-                        <option value="">-- Primero seleccione el tipo de proveedor --</option>
-                    </select>
-                </section>
-                <div class="step-navigation">
-                    <button type="button" class="btn-prev" onclick="anteriorPaso()">← Anterior</button>
-                    <button type="button" class="btn-next" onclick="siguientePaso()">Siguiente →</button>
-                </div>
-            </div>
-
-            <!-- Paso 3: Ítems de Evaluación -->
-            <div class="form-step" id="step3" data-step="3">
-                <section class="form-section" id="itemsSection" style="display: none;">
-                    <h2 id="itemsTitle">6. Ítems de Evaluación</h2>
-                    <div id="itemsContainer"></div>
-                </section>
-                <div class="step-navigation">
-                    <button type="button" class="btn-prev" onclick="anteriorPaso()">← Anterior</button>
-                    <button type="button" class="btn-next" onclick="siguientePaso()">Siguiente →</button>
-                </div>
-            </div>
-
-            <!-- Paso 4: Resultado y Guardar -->
-            <div class="form-step" id="step4" data-step="4">
-                <section class="form-section" id="resultSection">
-                    <h2>Resultado Final</h2>
-                    <div class="result-box">
-                        <div class="result-label">Resultado Ponderado:</div>
-                        <div class="result-value" id="resultadoFinal">0%</div>
-                    </div>
-                </section>
-                <div class="step-navigation">
-                    <button type="button" class="btn-prev" onclick="anteriorPaso()">← Anterior</button>
-                    <button type="submit" id="guardarBtn" class="btn-save" style="margin-left: auto;">💾 Guardar
-                        Evaluación</button>
-                </div>
-            </div>
-        </form>
+        <footer class="page-footer">
+            <p>Juntos construyendo mejores alianzas</p>
+            <div class="footer-waves" aria-hidden="true"></div>
+        </footer>
     </div>
 
-    <!-- Modal de éxito personalizado -->
     <div id="successModal" class="success-modal">
         <div class="success-modal-content">
             <div class="success-icon">
@@ -280,30 +321,31 @@
         </div>
     </div>
 
-    <script src="js/script.js?v=62"></script>
+    <div id="idleModal" class="success-modal idle-modal">
+        <div class="success-modal-content">
+            <h2>¿Sigues ahí?</h2>
+            <p>Tu sesión se cerrará en <strong id="idleCountdown">60</strong> s por inactividad.</p>
+            <div class="idle-actions">
+                <button type="button" id="idleStayBtn" class="success-btn">Sí, sigo aquí</button>
+                <button type="button" id="idleLeaveBtn" class="idle-leave-btn">Salir</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js?v=90"></script>
+    <script src="js/evaluador-portal.js?v=94"></script>
+    <script src="js/tema.js?v=70"></script>
     <script>
-        // Manejo del Consentimiento de Privacidad (Ley 21.719)
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const checkbox = document.getElementById('privacyConsent');
-            const comenzarBtn = document.getElementById('comenzarBtn');
-
-            if (checkbox && comenzarBtn) {
-                // Deshabilitar botón por defecto
-                comenzarBtn.disabled = true;
-                comenzarBtn.style.opacity = '0.5';
-                comenzarBtn.style.cursor = 'not-allowed';
-
-                checkbox.addEventListener('change', function() {
-                    if (this.checked) {
-                        comenzarBtn.disabled = false;
-                        comenzarBtn.style.opacity = '1';
-                        comenzarBtn.style.cursor = 'pointer';
-                    } else {
-                        comenzarBtn.disabled = true;
-                        comenzarBtn.style.opacity = '0.5';
-                        comenzarBtn.style.cursor = 'not-allowed';
-                    }
-                });
+            if (!checkbox) return;
+            checkbox.addEventListener('change', function () {
+                if (typeof window.syncBotonComenzar === 'function') {
+                    window.syncBotonComenzar();
+                }
+            });
+            if (typeof window.syncBotonComenzar === 'function') {
+                window.syncBotonComenzar();
             }
         });
     </script>

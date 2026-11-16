@@ -4,6 +4,10 @@ async function api(path, options = {}) {
     const headers = { ...(options.headers || {}) };
     const password = sessionStorage.getItem('adminPassword');
     if (password) headers['X-Admin-Password'] = password;
+    const googleToken = sessionStorage.getItem('evaluadorGoogleToken');
+    if (googleToken && !headers.Authorization && !headers['X-Google-Token']) {
+        headers.Authorization = 'Bearer ' + googleToken;
+    }
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
     const response = await fetch(path, {
         method: options.method || 'GET',
@@ -30,6 +34,7 @@ function getConfiguracionDefault() {
         fechaInicioEncuesta: null,
         fechaFinEncuesta: null,
         zonaHorariaEncuesta: 'America/Santiago',
+        minutosSesion: 10,
         itemsProducto: [
             { nombre: 'Condiciones Financieras de Pago', ponderacion: 10 },
             { nombre: 'Información de certificación o implementación respecto a alguna ISO', ponderacion: 4 },
@@ -63,7 +68,8 @@ async function cargarConfiguracionEvaluacion() {
             anioEncuesta: data.anio_encuesta || new Date().getFullYear(),
             fechaInicioEncuesta: data.fecha_inicio_encuesta || null,
             fechaFinEncuesta: data.fecha_fin_encuesta || null,
-            zonaHorariaEncuesta: data.zona_horaria_encuesta || 'America/Santiago'
+            zonaHorariaEncuesta: data.zona_horaria_encuesta || 'America/Santiago',
+            minutosSesion: Number(data.minutos_sesion) > 0 ? Number(data.minutos_sesion) : 10
         };
     } catch (error) {
         console.error('Error al cargar configuración:', error);
@@ -83,7 +89,8 @@ async function guardarConfiguracionEvaluacion(config) {
             anio_encuesta: config.anioEncuesta || null,
             fecha_inicio_encuesta: config.fechaInicioEncuesta || null,
             fecha_fin_encuesta: config.fechaFinEncuesta || null,
-            zona_horaria_encuesta: config.zonaHorariaEncuesta || 'America/Santiago'
+            zona_horaria_encuesta: config.zonaHorariaEncuesta || 'America/Santiago',
+            minutos_sesion: Number(config.minutosSesion) > 0 ? Number(config.minutosSesion) : 10
         }
     });
     return true;
@@ -91,8 +98,14 @@ async function guardarConfiguracionEvaluacion(config) {
 
 async function cargarEvaluadores() {
     try {
-        const admin = sessionStorage.getItem('adminPassword') ? '?admin=1' : '';
-        const data = await api('/api/evaluadores' + admin);
+        const isAdmin = Boolean(sessionStorage.getItem('adminPassword'));
+        const data = await api('/api/evaluadores' + (isAdmin ? '?admin=1' : ''));
+        if (isAdmin) {
+            return (data || []).map(e => ({
+                nombre: e.nombre,
+                email: e.email || ''
+            }));
+        }
         return (data || []).map(e => e.nombre);
     } catch (error) {
         console.error('Error al cargar evaluadores:', error);
@@ -100,8 +113,18 @@ async function cargarEvaluadores() {
     }
 }
 
-async function crearEvaluador(nombre) {
-    return api('/api/evaluadores', { method: 'POST', body: { nombre } });
+async function crearEvaluador(nombre, email) {
+    return api('/api/evaluadores', {
+        method: 'POST',
+        body: { nombre, email: email || '' }
+    });
+}
+
+async function actualizarEmailEvaluador(nombre, email) {
+    return api('/api/evaluadores/email', {
+        method: 'PATCH',
+        body: { nombre, email: email || '' }
+    });
 }
 
 async function eliminarEvaluador(nombre) {
@@ -112,6 +135,23 @@ async function eliminarEvaluador(nombre) {
         console.error('Error al eliminar evaluador:', error);
         return false;
     }
+}
+
+async function obtenerGoogleClientId() {
+    const data = await api('/api/auth/google-client-id');
+    return data || { clientId: null, configured: false };
+}
+
+async function iniciarSesionGoogle(credential) {
+    return api('/api/auth/google', {
+        method: 'POST',
+        body: { credential }
+    });
+}
+
+async function cargarPendientesEvaluador(anio) {
+    const query = anio ? ('?anio=' + encodeURIComponent(anio)) : '';
+    return api('/api/evaluador/pendientes' + query);
 }
 
 async function cargarProveedores() {
@@ -354,6 +394,11 @@ if (typeof window !== 'undefined') {
     window.cargarEvaluacionesAdmin = cargarEvaluacionesAdmin;
     window.eliminarProveedor = eliminarProveedor;
     window.eliminarEvaluador = eliminarEvaluador;
+    window.crearEvaluador = crearEvaluador;
+    window.actualizarEmailEvaluador = actualizarEmailEvaluador;
     window.validarPasswordAdmin = validarPasswordAdmin;
     window.guardarEvaluacionEnSupabase = guardarEvaluacionEnSupabase;
+    window.obtenerGoogleClientId = obtenerGoogleClientId;
+    window.iniciarSesionGoogle = iniciarSesionGoogle;
+    window.cargarPendientesEvaluador = cargarPendientesEvaluador;
 }

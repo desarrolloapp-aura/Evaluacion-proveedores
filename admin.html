@@ -5,9 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración - Evaluación de Proveedores</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/admin.css?v=69">
-    <script src="js/supabase-service.js?v=61"></script>
+    <link rel="icon" href="public/favicon.png">
+    <link rel="stylesheet" href="css/style.css?v=71">
+    <link rel="stylesheet" href="css/admin.css?v=87">
+    <script>
+        (function () {
+            var tema = localStorage.getItem('auraTema');
+            document.documentElement.setAttribute('data-theme', tema === 'dark' ? 'dark' : 'light');
+            if (localStorage.getItem('auraMenu') === 'collapsed') {
+                document.documentElement.classList.add('sidebar-collapsed');
+            }
+        })();
+    </script>
+    <script src="js/supabase-service.js?v=84"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
@@ -128,104 +138,59 @@
 
 <body>
     <div class="admin-layout">
-        <nav class="admin-sidebar">
-            <div class="sidebar-header">
-                <h2>Panel Admin</h2>
+        <nav class="admin-sidebar" aria-label="Menú de administración">
+            <div class="sidebar-brand">
+                <img src="public/favicon.png" alt="Aura" class="sidebar-logo">
+                <div class="sidebar-brand-text">
+                    <strong>Panel Admin</strong>
+                    <span>Evaluación de proveedores</span>
+                </div>
+                <div class="sidebar-tools">
+                    <button type="button" id="temaBtn" class="sidebar-icon-btn" data-tema-toggle aria-label="Cambiar color de la página">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z"></path></svg>
+                    </button>
+                    <button type="button" id="colapsarMenuBtn" class="sidebar-icon-btn" aria-label="Contraer o expandir el menú">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></svg>
+                    </button>
+                </div>
             </div>
             <ul class="sidebar-menu">
-                <li class="menu-item active" data-target="section-general"><svg class="nav-icon" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                    </svg> General</li>
-                <li class="menu-item" data-target="section-items-producto"><svg class="nav-icon" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path
-                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                        </path>
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                    </svg> Ítems Producto</li>
-                <li class="menu-item" data-target="section-items-servicio"><svg class="nav-icon" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                    </svg> Ítems Servicio</li>
-                <li class="menu-item" data-target="section-evaluadores"><svg class="nav-icon" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </svg> Evaluadores</li>
-                <li class="menu-item" data-target="section-proveedores"><svg class="nav-icon" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
-                        <line x1="9" y1="22" x2="9" y2="22.01"></line>
-                        <line x1="15" y1="22" x2="15" y2="22.01"></line>
-                        <line x1="9" y1="18" x2="9" y2="18.01"></line>
-                        <line x1="15" y1="18" x2="15" y2="18.01"></line>
-                        <line x1="9" y1="14" x2="9" y2="14.01"></line>
-                        <line x1="15" y1="14" x2="15" y2="14.01"></line>
-                        <line x1="9" y1="10" x2="9" y2="10.01"></line>
-                        <line x1="15" y1="10" x2="15" y2="10.01"></line>
-                        <line x1="9" y1="6" x2="9" y2="6.01"></line>
-                        <line x1="15" y1="6" x2="15" y2="6.01"></line>
-                    </svg> Proveedores</li>
-                <li class="menu-item" data-target="section-asignaciones"><svg class="nav-icon" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                    </svg> Asignaciones</li>
-                <li class="menu-item" data-target="section-evaluaciones"><svg class="nav-icon" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg> Evaluaciones Guardadas</li>
-                <li class="menu-item" data-target="section-pdfs"><svg class="nav-icon" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="12" y1="18" x2="12" y2="12"></line>
-                        <line x1="9" y1="15" x2="15" y2="15"></line>
-                    </svg> Generar PDFs</li>
-                <li class="menu-item menu-item-config-mobile" data-target="section-configuracion"><svg class="nav-icon"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path
-                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                        </path>
-                    </svg> Configuración</li>
+                <li class="menu-item active" data-target="section-general"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg><span class="nav-label">General</span></li>
+                <li class="nav-group">Catálogo</li>
+                <li class="menu-item" data-target="section-items-producto"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22" x2="12" y2="12"></line></svg><span class="nav-label">Ítems de producto</span></li>
+                <li class="menu-item" data-target="section-items-servicio"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg><span class="nav-label">Ítems de servicio</span></li>
+                <li class="nav-group">Gestión</li>
+                <li class="menu-item" data-target="section-evaluadores"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span class="nav-label">Evaluadores</span></li>
+                <li class="menu-item" data-target="section-proveedores"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6h6v6"></path></svg><span class="nav-label">Proveedores</span></li>
+                <li class="menu-item" data-target="section-asignaciones"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span class="nav-label">Asignaciones</span></li>
+                <li class="nav-group">Resultados</li>
+                <li class="menu-item" data-target="section-indicadores"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l4-4 4 3 5-6"></path></svg><span class="nav-label">Indicadores</span></li>
+                <li class="menu-item" data-target="section-evaluaciones"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg><span class="nav-label">Evaluaciones guardadas</span></li>
+                <li class="menu-item" data-target="section-pdfs"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M12 18v-6"></path><path d="M9 15l3 3 3-3"></path></svg><span class="nav-label">Generar PDFs</span></li>
             </ul>
             <div class="sidebar-footer">
-                <button id="volverBtn" class="btn-secondary-sidebar">
-                    <svg class="nav-icon" style="margin-right:8px" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="19" y1="12" x2="5" y2="12"></line>
-                        <polyline points="12 19 5 12 12 5"></polyline>
-                    </svg>
-                    Volver al Form
+                <ul class="sidebar-menu sidebar-menu-foot">
+                    <li class="menu-item menu-item-config-mobile" data-target="section-configuracion"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 11 3.09V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1.05 1.39 1.2H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span class="nav-label">Configuración</span></li>
+                </ul>
+                <button id="volverBtn" type="button" class="sidebar-link-btn">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <span class="nav-label">Volver al formulario</span>
                 </button>
-                <button id="cerrarSesionBtn" class="btn-danger-sidebar">
-                    <svg class="nav-icon" style="margin-right:8px" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
-                    Cerrar Sesión
-                </button>
+                <div class="sidebar-user">
+                    <span class="sidebar-avatar" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="8" r="4"></circle></svg>
+                        <span class="session-dot"></span>
+                    </span>
+                    <div class="sidebar-user-text">
+                        <strong>Administrador</strong>
+                        <span>Sesión activa</span>
+                    </div>
+                    <button id="cerrarSesionBtn" type="button" class="sidebar-logout" aria-label="Cerrar sesión">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span class="logout-label">Cerrar sesión</span>
+                    </button>
+                </div>
             </div>
         </nav>
 
@@ -318,6 +283,14 @@
                             </small>
                         </div>
 
+                        <div class="form-group">
+                            <label>Minutos de sesión del evaluador:</label>
+                            <input type="number" id="minutosSesion" min="1" max="240" value="10" style="width: 200px;">
+                            <small style="display: block; color: #666; margin-top: 5px;">
+                                Tiempo visible del contador antes de preguntar “¿Sigues ahí?” (1 a 240 minutos). Por defecto 10.
+                            </small>
+                        </div>
+
                         <div id="mensajeFechas"
                             style="display: none; padding: 10px; margin-top: 15px; border-radius: 5px;"></div>
                         <button type="button" id="guardarGeneralBtn" class="btn-add" style="margin-top:30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: 600; padding: 12px 24px; border-radius: 8px;">Guardar Configuración General</button>
@@ -359,26 +332,38 @@
 
                 <!-- Sección: Gestión de Evaluadores -->
                 <section id="section-evaluadores" class="admin-section" style="display: none;">
-                    <h2>
-                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                        </svg>
-                        Gestión de Evaluadores
-                    </h2>
-                    <div class="form-group">
-                        <label>Agregar nuevo evaluador</label>
+                    <div class="section-head-row">
+                        <h2>
+                            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            Gestión de Evaluadores
+                        </h2>
+                        <button type="button" id="mostrarFormEvaluadorBtn" class="btn-icon-add" title="Agregar evaluador" aria-label="Agregar evaluador">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        </button>
+                    </div>
+                    <p class="section-hint">El correo de cada evaluador es el que usa para entrar al formulario con Google.</p>
+
+                    <div id="formNuevoEvaluador" class="create-card" hidden>
+                        <div class="create-card-head">
+                            <strong>Nuevo evaluador</strong>
+                            <button type="button" id="cerrarFormEvaluadorBtn" class="btn-text">Cancelar</button>
+                        </div>
                         <div class="add-evaluador-container">
-                            <input type="text" id="nuevoEvaluador" placeholder="Nombre del evaluador">
-                            <button type="button" id="agregarEvaluadorBtn" class="btn-add">Agregar evaluador</button>
+                            <input type="text" id="nuevoEvaluador" placeholder="Nombre del evaluador" autocomplete="name">
+                            <input type="email" id="emailNuevoEvaluador" placeholder="Correo de acceso (Google)" autocomplete="email">
+                            <button type="button" id="agregarEvaluadorBtn" class="btn-add">Guardar evaluador</button>
                         </div>
                     </div>
+
                     <div class="data-panel">
                         <div class="data-toolbar">
-                            <input type="search" id="buscarEvaluador" placeholder="Buscar evaluador">
+                            <input type="search" id="buscarEvaluador" placeholder="Buscar por nombre o correo">
                             <span id="conteoEvaluadores" class="data-count">0 personas</span>
                         </div>
                         <div id="evaluadoresList"></div>
@@ -436,6 +421,94 @@
                     <button type="button" id="guardarAsignacionesBtn" class="asig-save">Guardar Asignaciones</button>
                 </section>
 
+                <!-- Sección: Indicadores gráficos -->
+                <section id="section-indicadores" class="admin-section" style="display: none;">
+                    <div class="ind-header">
+                        <div>
+                            <h2>
+                                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l4-4 4 3 5-6"></path></svg>
+                                Indicadores
+                            </h2>
+                            <p class="section-hint">Resumen ejecutivo y seguimiento de adherencia, resultados y pendientes.</p>
+                        </div>
+                        <div class="ind-toolbar">
+                            <label for="filtroAnioIndicadores">Año</label>
+                            <select id="filtroAnioIndicadores">
+                                <option value="">Cargando…</option>
+                            </select>
+                            <button type="button" id="refrescarIndicadoresBtn" class="btn-add ind-refresh-btn">Actualizar</button>
+                        </div>
+                    </div>
+
+                    <div id="indicadoresEmpty" class="ind-empty" hidden>
+                        No hay asignaciones ni evaluaciones para armar el resumen.
+                    </div>
+
+                    <div id="indicadoresContent" hidden>
+                        <div class="ind-kpi-grid" id="indKpiGrid"></div>
+
+                        <div class="ind-grid-2">
+                            <article class="ind-card">
+                                <h3>Estado de resultados</h3>
+                                <p class="ind-card-sub">Evaluados vs pendientes · umbral bueno ≥ 75%</p>
+                                <div class="ind-chart-wrap">
+                                    <canvas id="chartEstado"></canvas>
+                                </div>
+                                <div class="ind-legend" id="legendEstado"></div>
+                            </article>
+                            <article class="ind-card">
+                                <h3>Encuestas por tipo</h3>
+                                <p class="ind-card-sub">Producto y servicio · evaluadas vs pendientes</p>
+                                <div class="ind-chart-wrap">
+                                    <canvas id="chartTipo"></canvas>
+                                </div>
+                            </article>
+                        </div>
+
+                        <div class="ind-grid-2" id="indResumenTipo"></div>
+
+                        <div class="ind-grid-2 ind-grid-ranks">
+                            <article class="ind-card">
+                                <h3>Top 10 mejor evaluados</h3>
+                                <div id="indTop10" class="ind-rank-list"></div>
+                            </article>
+                            <article class="ind-card">
+                                <h3>Resultados deficientes</h3>
+                                <p class="ind-card-sub">Puntaje bajo 75%</p>
+                                <div id="indDeficientes" class="ind-rank-list"></div>
+                            </article>
+                        </div>
+
+                        <div class="ind-grid-2 ind-grid-follow">
+                            <article class="ind-card">
+                                <h3>Evaluadores con pendientes</h3>
+                                <p class="ind-card-sub">Pulsa un nombre para ver qué proveedores le faltan</p>
+                                <div id="indSinEvaluar" class="ind-eval-pending"></div>
+                            </article>
+                            <article class="ind-card">
+                                <h3>Adherencia por evaluador</h3>
+                                <p class="ind-card-sub">(+) aporte al total · (−) impacto pendiente</p>
+                                <div class="ind-table-scroll">
+                                    <table class="ind-table" id="indTablaEvaluadores">
+                                        <thead>
+                                            <tr>
+                                                <th>Evaluador</th>
+                                                <th>Hechas</th>
+                                                <th>Faltan</th>
+                                                <th>Total</th>
+                                                <th>% (+)</th>
+                                                <th>% (−)</th>
+                                                <th>Avance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Sección: Evaluaciones Guardadas -->
                 <section id="section-evaluaciones" class="admin-section" style="display: none;">
                     <h2>
@@ -460,12 +533,11 @@
                             </select>
                         </div>
                         <div id="contenidoAnio" style="display: none; margin-top: 20px;">
-                            <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                                <button type="button" id="descargarAnioCompletoBtn" class="btn-add"
-                                    style="width: 100%; padding: 12px 20px; font-size: 1rem; white-space: normal; word-wrap: break-word;">📥
-                                    DESCARGAR TODO EL AÑO SELECCIONADO</button>
+                            <div class="year-download-bar">
+                                <button type="button" id="descargarAnioCompletoBtn" class="btn-add">📥
+                                    Descargar todo el año seleccionado</button>
                             </div>
-                            <h3 style="margin-bottom: 15px; color: #333;">Evaluaciones Individuales:</h3>
+                            <h3>Evaluaciones individuales</h3>
                             <div id="evaluacionesList"></div>
                         </div>
                     </div>
@@ -494,12 +566,11 @@
                             </select>
                         </div>
                         <div id="contenidoAnioPDF" style="display: none; margin-top: 20px;">
-                            <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                                <button type="button" id="descargarPDFAnioCompletoBtn" class="btn-add"
-                                    style="width: 100%; padding: 12px 20px; font-size: 1rem; white-space: normal; word-wrap: break-word;">📥
-                                    DESCARGAR TODOS LOS PDFs DEL AÑO SELECCIONADO</button>
+                            <div class="year-download-bar">
+                                <button type="button" id="descargarPDFAnioCompletoBtn" class="btn-add">📥
+                                    Descargar todos los PDFs del año seleccionado</button>
                             </div>
-                            <h3 style="margin-bottom: 15px; color: #333;">PDFs Individuales:</h3>
+                            <h3>PDFs individuales</h3>
                             <div id="pdfsList"></div>
                         </div>
                     </div>
@@ -551,8 +622,11 @@
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
     <script src="js/admin-pdf.js?v=60"></script>
-    <script src="js/admin.js?v=69"></script>
+    <script src="js/admin.js?v=84"></script>
+    <script src="js/admin-indicadores.js?v=87"></script>
+    <script src="js/tema.js?v=71"></script>
     <script>
         // Script para manejar el menú móvil de configuración
         document.addEventListener('DOMContentLoaded', function () {
@@ -711,7 +785,8 @@
                     }
 
                     // Obtener texto del título (sin el icono si se prefiere)
-                    let title = this.textContent;
+                    const label = this.querySelector('.nav-label');
+                    const title = label ? label.textContent.trim() : this.textContent.trim();
                     switchSection(target, title);
                 });
             });
