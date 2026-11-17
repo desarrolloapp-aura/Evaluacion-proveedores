@@ -1,10 +1,21 @@
 (function () {
+    function syncTemaButton() {
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        document.querySelectorAll('[data-tema-toggle]').forEach(function (btn) {
+            btn.setAttribute('aria-label', dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+            btn.title = dark ? 'Modo claro' : 'Modo oscuro';
+        });
+    }
+
+    syncTemaButton();
+
     document.querySelectorAll('[data-tema-toggle]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var actual = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
             var siguiente = actual === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', siguiente);
             localStorage.setItem('auraTema', siguiente);
+            syncTemaButton();
             document.dispatchEvent(new CustomEvent('aura-tema-changed', { detail: { tema: siguiente } }));
         });
     });
